@@ -92,7 +92,10 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   count           = 1
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1",
+    "1c58a2a85817304209da0f5fe81a81e9d8cb7422"
+  ]
 }
 
 data "aws_iam_policy_document" "github_oidc_assume_role" {
