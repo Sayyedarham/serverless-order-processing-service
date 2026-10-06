@@ -91,7 +91,7 @@ data "tls_certificate" "github" {
 resource "aws_iam_openid_connect_provider" "github_actions" {
   count           = 1
   url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
+  client_id_list  = ["sts.amazonaws.com", "https://github.com/Sayyedarham"]
   thumbprint_list = [
     "6938fd4d98bab03faadb97b34396831e3780aea1",
     "1c58a2a85817304209da0f5fe81a81e9d8cb7422"
@@ -111,13 +111,16 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
-      values   = ["sts.amazonaws.com"]
+      values   = ["sts.amazonaws.com", "https://github.com/Sayyedarham"]
     }
 
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:*"]
+      values = [
+        "repo:Sayyedarham/serverless-order-processing-service:*",
+        "repo:sayyedarham/serverless-order-processing-service:*"
+      ]
     }
   }
 }
