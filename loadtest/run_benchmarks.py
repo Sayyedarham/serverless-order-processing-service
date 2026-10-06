@@ -5,13 +5,19 @@ import os
 import subprocess
 import time
 import uuid
+
 import boto3
 import requests
 
 API_URL = os.getenv("API_URL", "https://l67j9sjm76.execute-api.us-east-1.amazonaws.com")
 REGION = os.getenv("AWS_REGION", "us-east-1")
-DLQ_URL = os.getenv("ORDERS_DLQ_URL", "https://sqs.us-east-1.amazonaws.com/293162038789/serverless-orders-dlq-prod")
-QUEUE_URL = os.getenv("ORDERS_QUEUE_URL", "https://sqs.us-east-1.amazonaws.com/293162038789/serverless-orders-queue-prod")
+DLQ_URL = os.getenv(
+    "ORDERS_DLQ_URL", "https://sqs.us-east-1.amazonaws.com/293162038789/serverless-orders-dlq-prod"
+)
+QUEUE_URL = os.getenv(
+    "ORDERS_QUEUE_URL",
+    "https://sqs.us-east-1.amazonaws.com/293162038789/serverless-orders-queue-prod",
+)
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "..", "docs", "results")
 
 
@@ -21,14 +27,17 @@ def ensure_results_dir() -> None:
 
 def run_k6_load_test() -> dict:
     print("\n--- Running k6 Baseline Load Test (60s constant arrival rate) ---")
-    k6_path = "k6"
     summary_file = os.path.join(RESULTS_DIR, "k6_baseline_summary.json")
     raw_output_file = os.path.join(RESULTS_DIR, "k6_baseline_raw.txt")
 
     env = os.environ.copy()
     env["API_URL"] = API_URL
-    user_path = [os.environ.get("Path", ""), "C:\\Program Files\\k6", "C:\\Program Files\\GitHub CLI"]
-    env["Path"] = ";".join(user_path)
+    user_path = [
+        os.environ.get("PATH", ""),
+        "C:\\Program Files\\k6",
+        "C:\\Program Files\\GitHub CLI",
+    ]
+    env["PATH"] = ";".join(user_path)
 
     cmd = [
         "k6",
@@ -44,7 +53,7 @@ def run_k6_load_test() -> dict:
 
     print(result.stdout)
     if os.path.exists(summary_file):
-        with open(summary_file, "r", encoding="utf-8") as f:
+        with open(summary_file, encoding="utf-8") as f:
             return json.load(f)
     return {"raw": result.stdout}
 
@@ -61,7 +70,14 @@ def run_resiliency_and_chaos_test() -> dict:
         idem_key = f"chaos-test-{i}-{uuid.uuid4()}"
         payload = {
             "customer_id": "sim-fail-transient",
-            "items": [{"item_id": f"item-chaos-{i}", "name": "Chaos Simulated Item", "quantity": 1, "price": 10.0}],
+            "items": [
+                {
+                    "item_id": f"item-chaos-{i}",
+                    "name": "Chaos Simulated Item",
+                    "quantity": 1,
+                    "price": 10.0,
+                }
+            ],
         }
         res = requests.post(
             f"{API_URL}/orders",
@@ -69,15 +85,27 @@ def run_resiliency_and_chaos_test() -> dict:
             json=payload,
         )
         data = res.json()
-        chaos_orders.append({"idempotency_key": idem_key, "order_id": data.get("orderId"), "status_code": res.status_code})
+        chaos_orders.append(
+            {
+                "idempotency_key": idem_key,
+                "order_id": data.get("orderId"),
+                "status_code": res.status_code,
+            }
+        )
 
-    print(f"Accepted {len(chaos_orders)} orders. Waiting for worker retries (3 attempts) -> DLQ routing (~25s)...")
+    print(
+        f"Accepted {len(chaos_orders)} orders. Waiting for worker retries (3 attempts) -> DLQ routing (~25s)..."
+    )
     time.sleep(30)
 
     # 2. Check DLQ message count
     dlq_attrs = sqs.get_queue_attributes(
         QueueUrl=DLQ_URL,
-        AttributeNames=["ApproximateNumberOfMessages", "ApproximateNumberOfMessagesNotVisible", "QueueArn"],
+        AttributeNames=[
+            "ApproximateNumberOfMessages",
+            "ApproximateNumberOfMessagesNotVisible",
+            "QueueArn",
+        ],
     )["Attributes"]
     dlq_messages = int(dlq_attrs.get("ApproximateNumberOfMessages", 0))
     print(f"DLQ Approximate Number of Messages Visible: {dlq_messages}")
@@ -90,7 +118,6 @@ def run_resiliency_and_chaos_test() -> dict:
 
     # 4. Demonstrate DLQ Redrive Capability
     print("Testing DLQ Redrive (moving messages back to main queue)...")
-    redrive_arn = None
     try:
         redrive_res = sqs.start_message_move_task(
             SourceArn=dlq_attrs["QueueArn"],
@@ -98,7 +125,9 @@ def run_resiliency_and_chaos_test() -> dict:
         task_handle = redrive_res.get("TaskHandle")
         print(f"Started DLQ message move task: {task_handle}")
         time.sleep(5)
-        move_status = sqs.list_message_move_tasks(SourceArn=dlq_attrs["QueueArn"]).get("Results", [])
+        move_status = sqs.list_message_move_tasks(SourceArn=dlq_attrs["QueueArn"]).get(
+            "Results", []
+        )
         print(f"Move task status: {move_status}")
     except Exception as e:
         print(f"Redrive task notice: {e}")
