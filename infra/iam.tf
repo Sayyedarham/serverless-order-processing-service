@@ -93,6 +93,7 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com", "https://github.com/Sayyedarham"]
   thumbprint_list = [
+    "06d927fecd0a84aeba28aad1d808139470fe95c3",
     "6938fd4d98bab03faadb97b34396831e3780aea1",
     "1c58a2a85817304209da0f5fe81a81e9d8cb7422"
   ]
