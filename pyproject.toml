@@ -50,11 +50,16 @@ ignore = [
     "B008", # do not perform function calls in argument defaults
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG001"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["common", "ingest", "worker", "status"]
 
 [tool.mypy]
 python_version = "3.12"
+mypy_path = "src"
+explicit_package_bases = true
 strict = true
 warn_unused_configs = true
 disallow_untyped_defs = true

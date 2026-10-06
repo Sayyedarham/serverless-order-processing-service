@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-10-06T04:38:19Z",
+  "injected_failing_orders": 5,
+  "dlq_messages_detected": 0,
+  "alarm_name": "serverless-orders-dlq-messages-visible-prod",
+  "alarm_state": "OK",
+  "redrive_task_initiated": true,
+  "orders": [
+    {
+      "idempotency_key": "chaos-test-0-fe41d9d2-a74d-4312-9252-6abc0d99b277",
+      "order_id": "6345e4e6-bc12-574e-a504-6b277779bbf1",
+      "status_code": 202
+    },
+    {
+      "idempotency_key": "chaos-test-1-9e484ef6-86be-4838-a026-f96fe7d787c6",
+      "order_id": "82779718-ccc2-5012-bca7-7e99f561fcb3",
+      "status_code": 202
+    },
+    {
+      "idempotency_key": "chaos-test-2-d6543345-c904-4aaa-8b26-2fdecc444adc",
+      "order_id": "9f553deb-930d-576a-8e94-13e2ab734f40",
+      "status_code": 202
+    },
+    {
+      "idempotency_key": "chaos-test-3-97f2db94-521e-496e-8c61-2905dd6f6a06",
+      "order_id": "07ce69d1-e9f8-56f9-8f22-fbdf288bbd08",
+      "status_code": 202
+    },
+    {
+      "idempotency_key": "chaos-test-4-ae20b563-a95a-4b13-85a3-147db964d967",
+      "order_id": "2422e002-20ac-57a0-a2db-c6f37d214ee8",
+      "status_code": 202
+    }
+  ]
+}

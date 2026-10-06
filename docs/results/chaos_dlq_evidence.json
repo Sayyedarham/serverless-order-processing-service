@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-10-06T04:42:05Z",
+  "dlq_messages_routed": 5,
+  "alarm_name": "serverless-orders-dlq-messages-visible-prod",
+  "alarm_state": "OK",
+  "alarm_reason": "Threshold Crossed: no datapoints were received for 1 period and 1 missing datapoint was treated as [NonBreaching].",
+  "redrive_task_handle": "eyJ0YXNrSWQiOiIwYzMxYTkwYi0yMzc4LTQzNDYtOTQ2Yy05MjczZmZlMTI2MjkiLCJzb3VyY2VBcm4iOiJhcm46YXdzOnNxczp1cy1lYXN0LTE6MjkzMTYyMDM4Nzg5OnNlcnZlcmxlc3Mtb3JkZXJzLWRscS1wcm9kIn0=",
+  "redrive_results": [
+    {
+      "Status": "COMPLETED",
+      "SourceArn": "arn:aws:sqs:us-east-1:293162038789:serverless-orders-dlq-prod",
+      "ApproximateNumberOfMessagesMoved": 5,
+      "ApproximateNumberOfMessagesToMove": 5,
+      "StartedTimestamp": 1791261720311
+    }
+  ]
+}
