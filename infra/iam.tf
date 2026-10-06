@@ -89,9 +89,9 @@ data "tls_certificate" "github" {
 }
 
 resource "aws_iam_openid_connect_provider" "github_actions" {
-  count           = 1
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com", "https://github.com/Sayyedarham"]
+  count          = 1
+  url            = "https://token.actions.githubusercontent.com"
+  client_id_list = ["sts.amazonaws.com"]
   thumbprint_list = [
     "06d927fecd0a84aeba28aad1d808139470fe95c3",
     "6938fd4d98bab03faadb97b34396831e3780aea1",
@@ -112,7 +112,7 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:aud"
-      values   = ["sts.amazonaws.com", "https://github.com/Sayyedarham"]
+      values   = ["sts.amazonaws.com"]
     }
 
     condition {
