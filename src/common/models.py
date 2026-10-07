@@ -9,6 +9,7 @@ class OrderStatus(StrEnum):
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    DLQ = "DLQ"
 
 
 class OrderItem(BaseModel):

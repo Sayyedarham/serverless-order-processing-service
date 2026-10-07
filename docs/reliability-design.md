@@ -16,6 +16,18 @@ Supported demo behaviors are normal success, `customer_id: "sim-delay"` (a fixed
 
 This models an idempotent **simulated result**, not an external payment or shipping side effect. A real downstream provider must enforce the same key at the side-effect boundary. SQS remains at-least-once, and this change alone does not make order state transitions conditional.
 
+## Phase 4: Worker Retry Window
+
+The worker test simulates a crash after the fulfillment result is persisted but before the order can be marked `COMPLETED`. The first delivery returns its SQS item as failed and leaves the order `PROCESSING`; the retry uses the same fulfillment key, reuses the saved result, and completes the order. The test verifies there is still exactly one fulfillment result item.
+
+This proves retry safety for the in-process simulation and its DynamoDB result record. It does not prove exactly-once execution or protect a real external side effect unless that provider honors the same idempotency key.
+
+## Phase 5: Bounded DLQ Recovery
+
+On the final configured SQS receive attempt, a transient failure marks the correlated order `DLQ` before returning the record as failed so SQS can move it to the DLQ. The operator redrive script requires an explicit message cap (maximum 100) and operator identity, resets only `DLQ` orders to `RECEIVED`, republishes their unchanged message, and then deletes the DLQ copy. Each operation is logged with an invocation run ID. A crash between publish and delete may duplicate delivery; the worker's stable fulfillment key handles that case. The recovery test routes an order to `DLQ`, removes its injected failure, redrives one message, and verifies `COMPLETED`.
+
+This is an operator-run application-level redrive, not SQS's unbounded `StartMessageMoveTask`. Status and queue updates span DynamoDB and SQS and are not atomic; a failed publish can leave an order `RECEIVED` while its message remains in the DLQ. `RECEIVED` is eligible on a rerun so the operator can repair that interruption.
+
 ## Target Invariants
 
 ### 1. Idempotent order acceptance

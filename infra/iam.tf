@@ -116,12 +116,9 @@ data "aws_iam_policy_document" "github_oidc_assume_role" {
     }
 
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values = [
-        "repo:Sayyedarham/serverless-order-processing-service:*",
-        "repo:sayyedarham/serverless-order-processing-service:*"
-      ]
+      values   = ["repo:Sayyedarham@115995089/serverless-order-processing-service@1406668086:ref:refs/heads/main"]
     }
   }
 }

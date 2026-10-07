@@ -4,7 +4,7 @@ from typing import Any
 
 from aws_lambda_powertools.metrics import MetricUnit
 
-from common.config import logger, metrics, tracer
+from common.config import MAX_RECEIVE_COUNT, logger, metrics, tracer
 from common.dynamo import get_order, update_order_status
 from common.models import OrderStatus
 from worker.downstream import (
@@ -89,6 +89,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         except DownstreamTransientError as transient_err:
             elapsed_ms = (time.perf_counter() - start_time) * 1000.0
             metrics.add_metric(name="OrdersFailed", unit=MetricUnit.Count, value=1)
+            receive_count = int(record.get("attributes", {}).get("ApproximateReceiveCount", "1"))
+            if receive_count >= MAX_RECEIVE_COUNT and "order_id" in locals() and order_id:
+                update_order_status(
+                    order_id=order_id, status=OrderStatus.DLQ, error_message=str(transient_err)
+                )
+                logger.error("Retry limit reached; order marked DLQ", extra={"receive_count": receive_count})
             logger.warning(
                 "Transient downstream failure, scheduling SQS retry via partial batch failure",
                 extra={"error": str(transient_err), "latency_ms": elapsed_ms},

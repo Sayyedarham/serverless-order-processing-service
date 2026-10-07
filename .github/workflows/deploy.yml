@@ -8,16 +8,52 @@ on:
     paths:
       - "infra/**"
       - "src/**"
+      - ".github/workflows/deploy.yml"
 
 permissions:
-  id-token: write
   contents: read
-  pull-requests: write
 
 jobs:
-  terraform:
-    name: Terraform Plan & Apply
+  validate:
+    name: Terraform Validate
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12 for Layer Build
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Lambda Layer Dependencies
+        run: |
+          mkdir -p ../build/layer/python
+          pip install -t ../build/layer/python --platform manylinux2014_x86_64 --only-binary=:all: --python-version 3.12 --implementation cp "pydantic>=2.7.0" "aws-lambda-powertools[all]>=3.0.0"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.0"
+
+      - name: Terraform Init (Validation Only)
+        run: terraform init -backend=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+  deploy:
+    name: Terraform Plan & Apply
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     defaults:
       run:
         working-directory: infra
@@ -53,9 +89,7 @@ jobs:
         run: terraform init
 
       - name: Terraform Plan
-        id: plan
         run: terraform plan -no-color
 
-      - name: Terraform Apply (Main Branch Only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Terraform Apply
         run: terraform apply -auto-approve

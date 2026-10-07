@@ -88,6 +88,7 @@ resource "aws_lambda_function" "worker" {
       ORDERS_QUEUE_URL             = aws_sqs_queue.orders_queue.id
       POWERTOOLS_SERVICE_NAME      = "order-worker"
       POWERTOOLS_METRICS_NAMESPACE = "OrderProcessingService"
+      MAX_RECEIVE_COUNT           = "3"
     }
   }
 

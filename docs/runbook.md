@@ -53,17 +53,16 @@
 ### How SQS Redrive Works
 The DLQ is configured with an **SQS Redrive Allow Policy** permitting the main queue (`serverless-orders-queue-prod`) as its destination.
 
-### Starting a Message Move Task (CLI)
-To move all messages from the DLQ back to the main queue for reprocessing:
-```bash
-# 1. Start Redrive
-aws sqs start-message-move-task \
-  --source-arn "arn:aws:sqs:us-east-1:293162038789:serverless-orders-dlq-prod"
+### Bounded, Audited Redrive
+After fixing the failure cause, redrive only a bounded batch. The script changes each eligible order from `DLQ` to `RECEIVED` before publishing it and logs the operator and run ID. It preserves the original message body and fulfillment key. The cap is required and cannot exceed 100 messages per invocation.
 
-# 2. Check Redrive Progress
-aws sqs list-message-move-tasks \
-  --source-arn "arn:aws:sqs:us-east-1:293162038789:serverless-orders-dlq-prod"
+```bash
+ORDERS_DLQ_URL="$(aws sqs get-queue-url --queue-name serverless-orders-dlq-prod --query QueueUrl --output text)" \
+ORDERS_QUEUE_URL="$(aws sqs get-queue-url --queue-name serverless-orders-queue-prod --query QueueUrl --output text)" \
+python loadtest/redrive_dlq.py --max-messages 10 --operator "<operator identity>"
 ```
+
+The process sends to the source queue before deleting from the DLQ. If it stops between those operations, duplicate delivery is possible and expected; worker fulfillment is idempotent. Orders in `RECEIVED` are also eligible so an operator can rerun after an interrupted reset/publish sequence. Other statuses remain in the DLQ for inspection.
 
 ---
 
