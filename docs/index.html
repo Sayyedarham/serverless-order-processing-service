@@ -757,7 +757,9 @@
 
 <body>
 
-   
+
+
+    <!-- ═══ TOP BAR ═══════════════════════════════════════════════ -->
 
     <div id="topbar">
 
@@ -787,13 +789,19 @@
 
       </div>
 
-   
+
+
+    <!-- ═══ MAIN LAYOUT ════════════════════════════════════════════ -->
 
     <div id="layout">
 
-       
+
+
+        <!-- ─── LEFT SIDEBAR ──────────────────────────────────────── -->
 
         <aside id="sidebar">
+
+
 
             <div class="sb-section">
 
@@ -841,6 +849,8 @@
 
               </div>
 
+
+
             <div class="sb-section">
 
                 <div class="sb-label">Order States</div>
@@ -879,6 +889,8 @@
 
               </div>
 
+
+
             <div class="sb-section">
 
                 <div class="sb-label">Architecture</div>
@@ -903,17 +915,27 @@
 
               </div>
 
+
+
           </aside>
 
-       
+
+
+        <!-- ─── RIGHT: SUBMIT + TRACE ──────────────────────────────── -->
 
         <div id="content">
 
-           
+
+
+            <!-- ── Submit Panel ─────────────────────────────────────── -->
 
             <section id="submit-panel">
 
+
+
                 <div class="panel-title">Submit Order &nbsp;·&nbsp; POST /orders</div>
+
+
 
                 <div class="field">
 
@@ -931,6 +953,8 @@
 
                   </div>
 
+
+
                 <div class="field">
 
                     <label>Customer ID</label>
@@ -938,6 +962,8 @@
                     <input type="text" id="customerId" value="cust-portfolio-user">
 
                   </div>
+
+
 
                 <div class="field">
 
@@ -958,6 +984,8 @@
 
                   </div>
 
+
+
                 <div class="field">
 
                     <label>JSON Request Body</label>
@@ -965,6 +993,8 @@
                     <textarea id="payload" rows="8"></textarea>
 
                   </div>
+
+
 
                 <div class="btn-group">
 
@@ -974,6 +1004,8 @@
             Replay</button>
 
                   </div>
+
+
 
                 <div style="padding-top:0.75rem; border-top:1px solid var(--border-dim);">
 
@@ -994,11 +1026,17 @@
 
                   </div>
 
+
+
               </section>
 
-           
+
+
+            <!-- ── Order Status & Trace Panel ──────────────────────── -->
 
             <main id="trace-panel">
+
+
 
                 <div class="trace-header">
 
@@ -1010,7 +1048,9 @@
 
                   </div>
 
-               
+
+
+                <!-- Idle placeholder -->
 
                 <div id="idle-msg">
 
@@ -1021,11 +1061,15 @@
 
                   </div>
 
-               
+
+
+                <!-- Step-by-step trace (hidden until first submit) -->
 
                 <div class="trace-steps" id="trace-steps" style="display:none;">
 
-                   
+
+
+                    <!-- STEP 1 ──────────────────────────────────────────── -->
 
                     <div class="step" id="step-1">
 
@@ -1070,7 +1114,9 @@
 
                       </div>
 
-                   
+
+
+                    <!-- STEP 2 ──────────────────────────────────────────── -->
 
                     <div class="step" id="step-2">
 
@@ -1121,7 +1167,9 @@
 
                       </div>
 
-                   
+
+
+                    <!-- STEP 3 ──────────────────────────────────────────── -->
 
                     <div class="step" id="step-3">
 
@@ -1167,7 +1215,9 @@
 
                       </div>
 
-                   
+
+
+                    <!-- STEP 4 ──────────────────────────────────────────── -->
 
                     <div class="step" id="step-4">
 
@@ -1214,7 +1264,9 @@
 
                       </div>
 
-                   
+
+
+                    <!-- STEP 5 ──────────────────────────────────────────── -->
 
                     <div class="step" id="step-5">
 
@@ -1222,7 +1274,7 @@
 
                             <div class="step-dot"></div>
 
-                           
+                            <!-- no connector – last step -->
 
                           </div>
 
@@ -1255,9 +1307,13 @@
 
                       </div>
 
-                  </div>
 
-               
+
+                  </div><!-- .trace-steps -->
+
+
+
+                <!-- Polling indicator -->
 
                 <div id="poll-indicator">
 
@@ -1269,7 +1325,9 @@
 
                   </div>
 
-               
+
+
+                <!-- Raw HTTP log -->
 
                 <div class="log-section" id="log-section" style="display:none;">
 
@@ -1281,371 +1339,218 @@
                  
         </div>
 
+
+
               </main>
 
-          </div>
 
-      </div>
+
+          </div><!-- #content -->
+
+      </div><!-- #layout -->
+
+
 
    
   <script>
+    const API_BASE = "https://l67j9sjm76.execute-api.us-east-1.amazonaws.com";
 
-    const API_BASE = "https\://l67j9sjm76.execute-api.us-east-1.amazonaws.com";
+    function ts() { return new Date().toISOString().substring(11, 23); }
 
-    /\* utils \*/
-
-    function ts() { return new * Date * ().toISOString().substring(11, 23); }
-
-    function appendLog(* msg*, * cls* = '') {
-
+    function appendLog(msg, cls = '') {
       const el = document.getElementById('raw-log');
-
-      el.innerHTML += `<span class="ll ${* cls *}">[${ts()}] ${* msg *}\n</span>`;
-
+      el.innerHTML += `<span class="ll ${cls}">[${ts()}] ${msg}
+</span>`;
       el.scrollTop = el.scrollHeight;
-
     }
 
     function clearLog() { document.getElementById('raw-log').innerHTML = ''; }
 
-    /\* step helpers \*/
-
     function resetSteps() {
-
       for (let i = 1; i <= 5; i++) {
-
         document.getElementById(`step-${i}`).className = 'step';
-
         const d = document.getElementById(`detail-${i}`);
-
         if (d) d.classList.remove('vis');
-
       }
-
     }
 
-    function setStep(* n*, * state*) {
-
-      document.getElementById(`step-${* n *}`).className = `step ${* state *}`;
-
-      const d = document.getElementById(`detail-${* n *}`);
-
+    function setStep(n, state) {
+      document.getElementById(`step-${n}`).className = `step ${state}`;
+      const d = document.getElementById(`detail-${n}`);
       if (d) d.classList.add('vis');
-
     }
 
-    function showBadge(* status*) {
-
+    function showBadge(status) {
       const b = document.getElementById('status-badge');
-
-      b.className = `badge-${* status *}`;
-
-      b.textContent = * status *;
-
+      b.className = `badge-${status}`;
+      b.textContent = status;
       b.style.display = 'inline-block';
-
     }
 
     function showTrace() {
-
       document.getElementById('idle-msg').style.display = 'none';
-
       document.getElementById('trace-steps').style.display = 'flex';
-
       document.getElementById('log-section').style.display = 'flex';
-
     }
 
-    /\* init \*/
-
     function generateIdempotencyKey() {
-
       document.getElementById('idempotencyKey').value = 'idem-' + crypto.randomUUID();
-
     }
 
     function applyPreset() {
-
       const preset = document.getElementById('itemSelect').value;
-
       let cid = 'cust-portfolio-user';
-
       if (preset === 'transient_fail') cid = 'sim-fail-transient';
-
       if (preset === 'permanent_fail') cid = 'sim-fail-permanent';
-
       document.getElementById('customerId').value = cid;
-
       document.getElementById('payload').value = JSON.stringify({
-
         customer_id: cid,
-
         items: [
-
           { item_id: 'sku-item-1', name: 'High-Performance Compute', quantity: 1, price: 49.99 },
-
           { item_id: 'sku-item-2', name: 'NVMe Storage Block', quantity: 2, price: 15.00 }
-
         ]
-
       }, null, 2);
-
     }
 
-    /\* submit \*/
-
     async function submitOrder() {
-
       const key = document.getElementById('idempotencyKey').value;
-
       const body = document.getElementById('payload').value;
 
       showTrace();
-
       clearLog();
-
       resetSteps();
-
       document.getElementById('status-badge').style.display = 'none';
-
       document.getElementById('trace-order-id').textContent = '—';
-
       document.getElementById('poll-indicator').style.display = 'none';
 
       setStep(1, 'active');
-
       document.getElementById('d1-host').textContent = 'l67j9sjm76.execute-api.us-east-1.amazonaws.com';
-
       document.getElementById('d1-key').textContent = key;
-
       appendLog(`POST ${API_BASE}/orders`, 'info');
-
       appendLog(`Idempotency-Key: ${key}`, 'dim');
 
       let data, httpStatus;
-
       try {
-
         const res = await fetch(`${API_BASE}/orders`, {
-
           method: 'POST',
-
           headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
-
           body
-
         });
-
         httpStatus = res.status;
-
         data = await res.json();
-
         appendLog(`← ${res.status} ${res.statusText}`, res.ok ? 'ok' : 'err');
-
         appendLog(JSON.stringify(data, null, 2), 'dim');
-
       } catch (err) {
-
         setStep(1, 'error');
-
         appendLog(`Error: ${err.message}`, 'err');
-
         return;
-
       }
 
       setStep(1, 'done');
-
       setStep(2, 'active');
-
       appendLog('Ingest Lambda validated payload, wrote RECEIVED, enqueued SQS…', 'info');
 
       if (data.orderId) {
-
         const oid = data.orderId;
-
         document.getElementById('trace-order-id').textContent = oid;
-
         document.getElementById('searchOrderId').value = oid;
-
         document.getElementById('d2-status').textContent = `${httpStatus} Accepted`;
-
         document.getElementById('d2-order').textContent = oid;
-
         showBadge('RECEIVED');
-
         setStep(2, 'done');
-
         setStep(3, 'done');
-
         appendLog('Message buffered in SQS, Worker Lambda will pick it up shortly…', 'ok');
-
         setStep(4, 'active');
-
         appendLog('Worker Lambda triggered by SQS, processing…', 'info');
-
         pollStatus(oid, 0);
-
       } else {
-
         setStep(2, 'done');
-
         appendLog('Response received (possibly idempotent replay — no new orderId).', 'warn');
-
       }
-
     }
 
     async function submitDuplicate() {
-
       appendLog('--- Replay: resubmitting with identical Idempotency-Key ---', 'warn');
-
       await submitOrder();
-
     }
 
-    /\* poll \*/
-
-    async function pollStatus(* orderId*, * attempts*) {
-
-      if (* attempts * > 5) {
-
+    async function pollStatus(orderId, attempts) {
+      if (attempts > 5) {
         document.getElementById('poll-indicator').style.display = 'none';
-
         appendLog('Max poll attempts reached. Use manual check.', 'warn');
-
         return;
-
       }
 
       const pi = document.getElementById('poll-indicator');
-
       pi.style.display = 'flex';
+      document.getElementById('poll-count').textContent = attempts + 1;
 
-      document.getElementById('poll-count').textContent = * attempts * + 1;
-
-      await new Promise(r *=>* setTimeout(r, 3000));
+      await new Promise(r => setTimeout(r, 3000));
 
       try {
-
-        const res = await fetch(`${API_BASE}/orders/${* orderId *}`);
-
+        const res = await fetch(`${API_BASE}/orders/${orderId}`);
         const data = await res.json();
-
         const st = data.order?.status || 'UNKNOWN';
-
-        appendLog(`[poll ${* attempts * + 1}] status = ${st}`, st === 'COMPLETED' ? 'ok' : (st === 'FAILED' ? 'err' : 'info'));
+        appendLog(`[poll ${attempts + 1}] status = ${st}`, st === 'COMPLETED' ? 'ok' : (st === 'FAILED' ? 'err' : 'info'));
 
         if (st === 'COMPLETED' || st === 'FAILED') {
-
           pi.style.display = 'none';
-
           const isOk = st === 'COMPLETED';
-
           setStep(4, isOk ? 'done' : 'error');
-
           document.getElementById('d4-status').textContent = st;
-
           document.getElementById('d4-status').className = `v ${isOk ? 'green' : 'red'}`;
-
           document.getElementById('d4-downstream').textContent = isOk ? 'OK' : 'FAILED';
 
           setStep(5, isOk ? 'done' : 'error');
-
           document.getElementById('step5-name').textContent = isOk
-
             ? 'Final State — Order Completed ✓'
-
             : 'Final State — Order Failed (→ DLQ)';
-
           document.getElementById('step5-desc').textContent = isOk
-
             ? 'The Worker Lambda successfully called the downstream fulfillment API and wrote COMPLETED to DynamoDB. The order lifecycle is fully complete.'
-
             : 'The Worker Lambda encountered an error. After exhausting all SQS retry attempts, the message was moved to the Dead-Letter Queue (DLQ) for manual investigation. The order status is FAILED.';
 
           document.getElementById('d5-status').textContent = st;
-
           document.getElementById('d5-status').className = `v ${isOk ? 'green' : 'red'}`;
-
           document.getElementById('d5-updated').textContent = data.order?.updated_at || '—';
-
           document.getElementById('d5-customer').textContent = data.order?.customer_id || '—';
 
           showBadge(st);
-
           appendLog(`Final state reached: ${st}`, isOk ? 'ok' : 'err');
-
         } else {
-
-          pollStatus(* orderId *, * attempts * + 1);
-
+          pollStatus(orderId, attempts + 1);
         }
-
       } catch (err) {
-
         pi.style.display = 'none';
-
         appendLog(`Poll error: ${err.message}`, 'err');
-
       }
-
     }
-
-    /\* manual check \*/
 
     async function fetchOrderStatus() {
-
       const orderId = document.getElementById('searchOrderId').value.trim();
-
       if (!orderId) return;
-
       showTrace();
-
       clearLog();
-
       document.getElementById('trace-order-id').textContent = orderId;
-
       appendLog(`GET ${API_BASE}/orders/${orderId}`, 'info');
-
       try {
-
         const res = await fetch(`${API_BASE}/orders/${orderId}`);
-
         const data = await res.json();
-
         appendLog(`← ${res.status} ${res.statusText}`, res.ok ? 'ok' : 'err');
-
         appendLog(JSON.stringify(data, null, 2), 'dim');
-
         const st = data.order?.status;
-
         if (st) {
-
           showBadge(st);
-
           document.getElementById('d5-status').textContent = st;
-
           document.getElementById('d5-updated').textContent = data.order?.updated_at || '—';
-
           document.getElementById('d5-customer').textContent = data.order?.customer_id || '—';
-
         }
-
       } catch (err) {
-
         appendLog(`Error: ${err.message}`, 'err');
-
       }
-
     }
 
-    /\* boot \*/
-
     generateIdempotencyKey();
-
     applyPreset();
-
   </script>
 
 </body>
