@@ -1,12 +1,15 @@
 import json
 from typing import Any
+from unittest.mock import Mock
 
 import boto3
 import pytest
 
+import worker.handler as worker_module
 from common.models import OrderStatus
 from ingest.handler import lambda_handler as ingest_handler
 from status.handler import lambda_handler as status_handler
+from worker.downstream import DownstreamTransientError
 from worker.handler import lambda_handler as worker_handler
 
 
@@ -70,9 +73,17 @@ def test_end_to_end_order_lifecycle(
 
 @pytest.mark.integration
 def test_dlq_routing_after_max_receive_retries(
-    setup_dynamodb: Any, setup_sqs: Any, lambda_context: Any
+    setup_dynamodb: Any,
+    setup_sqs: Any,
+    lambda_context: Any,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     sqs = boto3.client("sqs", region_name="us-east-1")
+    monkeypatch.setattr(
+        worker_module,
+        "call_downstream_fulfillment",
+        Mock(side_effect=DownstreamTransientError("injected by test")),
+    )
 
     ingest_event = {
         "httpMethod": "POST",
@@ -82,7 +93,7 @@ def test_dlq_routing_after_max_receive_retries(
         },
         "body": json.dumps(
             {
-                "customer_id": "sim-fail-transient",
+                "customer_id": "cust-dlq-test",
                 "items": [
                     {"item_id": "fail-item", "name": "Flaky Widget", "quantity": 1, "price": 9.99}
                 ],

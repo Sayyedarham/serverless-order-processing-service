@@ -12,7 +12,7 @@ These mechanisms do **not** currently guarantee durable enqueue after an ingest 
 
 The worker now calls a deterministic in-process fulfillment simulation. It uses the stable key `{orderId}:FULFILLMENT` and stores a successful result as a separate item in the existing DynamoDB table. Repeated successful calls return the stored result. The operation item uses the existing table TTL with a 30-day expiration, longer than the configured source-queue plus DLQ retention window.
 
-Supported demo behaviors are normal success, `customer_id: "sim-delay"` (a fixed 100 ms delay then success), `customer_id: "sim-timeout"` or the legacy `sim-fail-transient` (retryable timeout), and `customer_id: "sim-fail"` or the legacy `sim-fail-permanent` (permanent rejection). Timeout and rejection outcomes do not create a successful fulfillment record. These selectors are currently caller-controlled, matching the pre-existing demo convention; Phase 9 must scope failure injection to bounded verification runs before treating them as a safe public feature.
+The production simulation always returns a deterministic successful result. Tests inject transient and permanent failures by replacing the worker dependency in-process; public order fields cannot select failure behavior.
 
 This models an idempotent **simulated result**, not an external payment or shipping side effect. A real downstream provider must enforce the same key at the side-effect boundary. SQS remains at-least-once, and this change alone does not make order state transitions conditional.
 
@@ -27,6 +27,10 @@ This proves retry safety for the in-process simulation and its DynamoDB result r
 On the final configured SQS receive attempt, a transient failure marks the correlated order `DLQ` before returning the record as failed so SQS can move it to the DLQ. The operator redrive script requires an explicit message cap (maximum 100) and operator identity, resets only `DLQ` orders to `RECEIVED`, republishes their unchanged message, and then deletes the DLQ copy. Each operation is logged with an invocation run ID. A crash between publish and delete may duplicate delivery; the worker's stable fulfillment key handles that case. The recovery test routes an order to `DLQ`, removes its injected failure, redrives one message, and verifies `COMPLETED`.
 
 This is an operator-run application-level redrive, not SQS's unbounded `StartMessageMoveTask`. Status and queue updates span DynamoDB and SQS and are not atomic; a failed publish can leave an order `RECEIVED` while its message remains in the DLQ. `RECEIVED` is eligible on a rerun so the operator can repair that interruption.
+
+## Phase 6: Bounded Verification
+
+The manual GitHub Actions verification workflow accepts only the fixed `retry-window` and `dlq-recovery` scenarios. Each run executes one local Moto test, creates no AWS work, has a 10-minute job deadline, and retains its result artifact for seven days. Transient failure injection exists only in the test process; the public API cannot request it. This keeps verification asynchronous at the workflow level and bounds its scenarios, order/message count, execution time, and result retention.
 
 ## Target Invariants
 

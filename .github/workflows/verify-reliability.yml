@@ -1,0 +1,49 @@
+name: Bounded Reliability Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: Fixed reliability scenario
+        type: choice
+        required: true
+        options:
+          - retry-window
+          - dlq-recovery
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e .[dev]
+      - name: Run selected bounded scenario
+        shell: bash
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+        run: |
+          set -o pipefail
+          case "$SCENARIO" in
+            retry-window)
+              pytest -q --no-cov tests/unit/test_worker.py::test_retry_after_fulfillment_before_completion_write ;;
+            dlq-recovery)
+              pytest -q --no-cov tests/unit/test_worker.py::test_bounded_dlq_redrive_completes_order_after_failure_is_removed ;;
+            *)
+              echo "Unsupported verification scenario" >&2
+              exit 2 ;;
+          esac | tee verification-result.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-${{ inputs.scenario }}-${{ github.run_id }}
+          path: verification-result.txt
+          retention-days: 7
+          if-no-files-found: ignore

@@ -493,12 +493,6 @@
     <section class="col">
       <div class="panel"><span class="pt">1 · command</span>
         <div><span class="ps">$</span> curl -X POST <span class="src-apigw">$API</span>/orders \</div>
-        <label class="fl">--preset <small># scenario</small>
-          <select id="preset" onchange="preset()">
-            <option value="standard">standard → success path</option>
-            <option value="transient_fail">sim-fail-transient → retries → DLQ</option>
-            <option value="permanent_fail">sim-fail-permanent → fatal</option>
-          </select></label>
         <label class="fl">-H "Idempotency-Key:" <small># dedupe token</small>
           <div class="row"><input id="key" readonly><button class="sm" onclick="newKey()" title="new key">↺</button>
           </div>
@@ -619,10 +613,8 @@
 
     function newKey() { $('key').value = 'idem-' + crypto.randomUUID() }
     function preset() {
-      const p = $('preset').value;
-      const cid = p === 'transient_fail' ? 'sim-fail-transient' : p === 'permanent_fail' ? 'sim-fail-permanent' : 'cust-portfolio-user';
       $('body').value = JSON.stringify({
-        customer_id: cid, items: [
+        customer_id: 'cust-portfolio-user', items: [
           { item_id: 'sku-item-1', name: 'High-Performance Compute', quantity: 1, price: 49.99 },
           { item_id: 'sku-item-2', name: 'NVMe Storage Block', quantity: 2, price: 15.00 }]
       }, null, 2)

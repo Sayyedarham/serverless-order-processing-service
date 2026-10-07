@@ -78,7 +78,7 @@ flowchart TD
 - **Worker Lambda**:
   - Consumes SQS batches (up to 10 records per batch, 5s batching window).
   - Idempotent state check before executing downstream actions.
-  - Interacts with downstream services with simulated configurable failure rates.
+  - Runs the deterministic fulfillment simulation; failure injection is confined to tests.
 
 ### 4. Persistence & Lifecycle
 - **Amazon DynamoDB (Pay-Per-Request)**:

@@ -30,8 +30,11 @@ def redrive(max_messages: int, operator: str) -> int:
 
     while moved < max_messages:
         response = sqs.receive_message(
-            QueueUrl=dlq_url, MaxNumberOfMessages=min(10, max_messages - moved),
-            WaitTimeSeconds=1, AttributeNames=["All"], MessageAttributeNames=["All"],
+            QueueUrl=dlq_url,
+            MaxNumberOfMessages=min(10, max_messages - moved),
+            WaitTimeSeconds=1,
+            AttributeNames=["All"],
+            MessageAttributeNames=["All"],
         )
         messages = response.get("Messages", [])
         if not messages:
@@ -43,25 +46,47 @@ def redrive(max_messages: int, operator: str) -> int:
                 order_id = body["orderId"]
                 order = get_order(order_id)
                 if not order or order.get("status") not in {
-                    OrderStatus.DLQ.value, OrderStatus.RECEIVED.value
+                    OrderStatus.DLQ.value,
+                    OrderStatus.RECEIVED.value,
                 }:
-                    logger.warning(json.dumps({"event": "redrive_skipped", "run_id": run_id,
-                                              "operator": operator, "order_id": order_id,
-                                              "reason": "order missing or not eligible"}))
+                    logger.warning(
+                        json.dumps(
+                            {
+                                "event": "redrive_skipped",
+                                "run_id": run_id,
+                                "operator": operator,
+                                "order_id": order_id,
+                                "reason": "order missing or not eligible",
+                            }
+                        )
+                    )
                     continue
 
                 update_order_status(order_id, OrderStatus.RECEIVED)
-                sqs.send_message(QueueUrl=queue_url, MessageBody=message["Body"],
-                                 MessageAttributes=message.get("MessageAttributes", {}))
+                sqs.send_message(
+                    QueueUrl=queue_url,
+                    MessageBody=message["Body"],
+                    MessageAttributes=message.get("MessageAttributes", {}),
+                )
                 sqs.delete_message(QueueUrl=dlq_url, ReceiptHandle=message["ReceiptHandle"])
                 moved += 1
-                logger.info(json.dumps({"event": "redrive_completed", "run_id": run_id,
-                                        "operator": operator, "order_id": order_id}))
+                logger.info(
+                    json.dumps(
+                        {
+                            "event": "redrive_completed",
+                            "run_id": run_id,
+                            "operator": operator,
+                            "order_id": order_id,
+                        }
+                    )
+                )
                 if moved >= max_messages:
                     break
             except (KeyError, ValueError, ClientError) as error:
-                logger.exception("Redrive stopped with message retained", extra={"run_id": run_id,
-                                                                                "error": str(error)})
+                logger.exception(
+                    "Redrive stopped with message retained",
+                    extra={"run_id": run_id, "error": str(error)},
+                )
                 raise
     return moved
 

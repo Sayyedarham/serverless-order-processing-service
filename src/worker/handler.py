@@ -71,7 +71,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             call_downstream_fulfillment(
                 order_id=order_id,
                 fulfillment_key=fulfillment_key,
-                order_data=current_order,
             )
 
             update_order_status(order_id=order_id, status=OrderStatus.COMPLETED)
@@ -94,7 +93,9 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 update_order_status(
                     order_id=order_id, status=OrderStatus.DLQ, error_message=str(transient_err)
                 )
-                logger.error("Retry limit reached; order marked DLQ", extra={"receive_count": receive_count})
+                logger.error(
+                    "Retry limit reached; order marked DLQ", extra={"receive_count": receive_count}
+                )
             logger.warning(
                 "Transient downstream failure, scheduling SQS retry via partial batch failure",
                 extra={"error": str(transient_err), "latency_ms": elapsed_ms},
