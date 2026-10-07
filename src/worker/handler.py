@@ -1,5 +1,3 @@
-"""Worker Lambda Handler for SQS batch processing with partial batch failures."""
-
 import json
 import time
 from typing import Any
@@ -46,14 +44,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 order_id=order_id, idempotency_key=idempotency_key, message_id=message_id
             )
 
-            # 1. Idempotency Check: Fetch current state from DynamoDB
             current_order = get_order(order_id)
             if not current_order:
                 logger.warning(
                     "Order not found in DynamoDB during worker execution",
                     extra={"order_id": order_id},
                 )
-                # We could retry or fail. Retrying if DynamoDB read is eventually consistent.
                 batch_item_failures.append({"itemIdentifier": message_id})
                 continue
 
@@ -65,17 +61,14 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 )
                 continue
 
-            # 2. Advance status to PROCESSING
             update_order_status(
                 order_id=order_id,
                 status=OrderStatus.PROCESSING,
                 processed_by=getattr(context, "function_name", "local-worker"),
             )
 
-            # 3. Invoke downstream service
             call_downstream_fulfillment(order_id=order_id, order_data=current_order)
 
-            # 4. Mark status COMPLETED on success
             update_order_status(order_id=order_id, status=OrderStatus.COMPLETED)
             elapsed_ms = (time.perf_counter() - start_time) * 1000.0
 
@@ -95,7 +88,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 "Transient downstream failure, scheduling SQS retry via partial batch failure",
                 extra={"error": str(transient_err), "latency_ms": elapsed_ms},
             )
-            # Add to batch_item_failures so SQS retries this specific message
             batch_item_failures.append({"itemIdentifier": message_id})
 
         except DownstreamPermanentError as permanent_err:
@@ -105,7 +97,6 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 "Permanent downstream failure, marking order as FAILED without retry",
                 extra={"error": str(permanent_err), "latency_ms": elapsed_ms},
             )
-            # Permanent error: record FAILED in DynamoDB and do not retry in SQS
             if "order_id" in locals() and order_id:
                 update_order_status(
                     order_id=order_id, status=OrderStatus.FAILED, error_message=str(permanent_err)

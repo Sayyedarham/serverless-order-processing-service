@@ -1,5 +1,3 @@
-"""Comprehensive benchmark and chaos testing suite."""
-
 import json
 import os
 import subprocess
@@ -64,7 +62,6 @@ def run_resiliency_and_chaos_test() -> dict:
     cloudwatch = boto3.client("cloudwatch", region_name=REGION)
 
     chaos_orders = []
-    # 1. Ingest 5 orders specifically with transient downstream failure trigger
     print("Ingesting 5 failing orders to trigger DLQ routing...")
     for i in range(5):
         idem_key = f"chaos-test-{i}-{uuid.uuid4()}"
@@ -98,7 +95,6 @@ def run_resiliency_and_chaos_test() -> dict:
     )
     time.sleep(30)
 
-    # 2. Check DLQ message count
     dlq_attrs = sqs.get_queue_attributes(
         QueueUrl=DLQ_URL,
         AttributeNames=[
@@ -110,13 +106,11 @@ def run_resiliency_and_chaos_test() -> dict:
     dlq_messages = int(dlq_attrs.get("ApproximateNumberOfMessages", 0))
     print(f"DLQ Approximate Number of Messages Visible: {dlq_messages}")
 
-    # 3. Check CloudWatch Alarm status
     alarm_name = "serverless-orders-dlq-messages-visible-prod"
     alarms = cloudwatch.describe_alarms(AlarmNames=[alarm_name]).get("MetricAlarms", [])
     alarm_state = alarms[0]["StateValue"] if alarms else "UNKNOWN"
     print(f"CloudWatch Alarm [{alarm_name}] State: {alarm_state}")
 
-    # 4. Demonstrate DLQ Redrive Capability
     print("Testing DLQ Redrive (moving messages back to main queue)...")
     try:
         redrive_res = sqs.start_message_move_task(

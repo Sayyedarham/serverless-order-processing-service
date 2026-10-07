@@ -1,5 +1,3 @@
-"""Status Lambda Handler for GET /orders/{orderId} and GET /health."""
-
 import json
 import time
 from typing import Any
@@ -43,7 +41,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         or event.get("path", "")
     )
 
-    # Health check route
     if raw_path.rstrip("/").endswith("/health"):
         return build_response(
             200,
@@ -54,7 +51,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             },
         )
 
-    # Extract orderId from pathParameters
     path_parameters = event.get("pathParameters") or {}
     order_id = path_parameters.get("orderId") or path_parameters.get("id")
 

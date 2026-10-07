@@ -1,5 +1,3 @@
-"""Ingest Lambda Handler for POST /orders."""
-
 import json
 import time
 import uuid
@@ -13,7 +11,7 @@ from common.dynamo import IdempotencyConflictError, put_order_if_not_exists
 from common.models import OrderCreateRequest, OrderRecord, OrderStatus
 from common.sqs import send_order_message
 
-MAX_PAYLOAD_BYTES = 10 * 1024  # 10 KB limit to prevent abuse
+MAX_PAYLOAD_BYTES = 10 * 1024
 
 
 def build_response(
@@ -38,7 +36,6 @@ def build_response(
 @metrics.log_metrics(capture_cold_start_metric=True)
 @tracer.capture_lambda_handler
 def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    # Handle preflight CORS request
     http_method = (
         event.get("requestContext", {}).get("http", {}).get("method") or event.get("httpMethod", "")
     ).upper()
@@ -48,7 +45,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
     headers = {k.lower(): v for k, v in (event.get("headers") or {}).items()}
 
-    # 1. Shared secret authentication check (if configured)
     if SERVICE_KEY:
         client_key = headers.get("x-service-key")
         if not client_key or client_key != SERVICE_KEY:
@@ -57,7 +53,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
                 401, {"error": "Unauthorized", "message": "Invalid or missing X-Service-Key"}
             )
 
-    # 2. Idempotency Key validation
     idempotency_key = headers.get("idempotency-key", "").strip()
     if not idempotency_key:
         logger.warning("Rejected request missing Idempotency-Key header")
@@ -69,7 +64,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             },
         )
 
-    # 3. Payload size check
     raw_body = event.get("body") or ""
     if event.get("isBase64Encoded"):
         import base64
@@ -88,7 +82,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             },
         )
 
-    # 4. Pydantic payload parsing & validation
     try:
         body_dict = json.loads(raw_body) if raw_body else {}
         order_req = OrderCreateRequest(**body_dict)
@@ -103,7 +96,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             },
         )
 
-    # Deterministic orderId based on idempotency key
     order_id = str(uuid.uuid5(uuid.NAMESPACE_OID, idempotency_key))
     logger.append_keys(order_id=order_id, idempotency_key=idempotency_key)
 
@@ -128,7 +120,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         expiresAt=expires_at,
     )
 
-    # 5. Conditional put into DynamoDB (idempotent write)
     try:
         is_new, saved_record = put_order_if_not_exists(record)
     except IdempotencyConflictError as err:
@@ -138,7 +129,6 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             {"error": "Conflict", "message": str(err)},
         )
 
-    # 6. Publish to SQS only if this is a newly accepted order
     if is_new:
         send_order_message(
             order_id=order_id,

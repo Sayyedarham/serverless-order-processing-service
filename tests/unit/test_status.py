@@ -1,5 +1,3 @@
-"""Unit tests for Status Lambda handler."""
-
 import json
 from typing import Any
 

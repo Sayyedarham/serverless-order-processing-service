@@ -1,5 +1,3 @@
-"""SQS client helper for order event publishing."""
-
 import json
 from typing import Any
 
@@ -18,12 +16,6 @@ def get_sqs_client() -> Any:
 
 
 def send_order_message(order_id: str, idempotency_key: str, payload: dict[str, Any]) -> str:
-    """
-    Publish an order processing event to the standard SQS queue.
-
-    Returns:
-        MessageId from SQS send_message response.
-    """
     client = get_sqs_client()
     body = {
         "orderId": order_id,

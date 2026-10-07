@@ -1,5 +1,3 @@
-"""Unit tests for Ingest Lambda handler."""
-
 import base64
 import json
 from typing import Any
@@ -122,7 +120,6 @@ def test_ingest_valid_order_success_and_sqs_published(
     assert body["status"] == OrderStatus.RECEIVED.value
     assert body["message"] == "Order accepted for processing"
 
-    # Verify message was queued in SQS
     sqs = boto3.client("sqs", region_name="us-east-1")
     messages = sqs.receive_message(QueueUrl=setup_sqs["queue_url"], MaxNumberOfMessages=10).get(
         "Messages", []
@@ -150,12 +147,10 @@ def test_ingest_duplicate_submission_is_idempotent(
         "body": json.dumps(order_data),
     }
 
-    # First request
     resp1 = lambda_handler(event, lambda_context)
     assert resp1["statusCode"] == 202
     body1 = json.loads(resp1["body"])
 
-    # Duplicate request with same Idempotency-Key
     resp2 = lambda_handler(event, lambda_context)
     assert resp2["statusCode"] == 200
     body2 = json.loads(resp2["body"])
@@ -163,7 +158,6 @@ def test_ingest_duplicate_submission_is_idempotent(
     assert body1["orderId"] == body2["orderId"]
     assert body2["message"] == "Order already accepted (idempotent replay)"
 
-    # SQS should still only contain ONE message, not two!
     sqs = boto3.client("sqs", region_name="us-east-1")
     messages = sqs.receive_message(QueueUrl=setup_sqs["queue_url"], MaxNumberOfMessages=10).get(
         "Messages", []

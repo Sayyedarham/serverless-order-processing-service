@@ -1,5 +1,3 @@
-"""Integration tests for End-to-End order processing and DLQ redrive routing."""
-
 import json
 from typing import Any
 
@@ -16,8 +14,6 @@ from worker.handler import lambda_handler as worker_handler
 def test_end_to_end_order_lifecycle(
     setup_dynamodb: Any, setup_sqs: Any, lambda_context: Any
 ) -> None:
-    """Verify complete lifecycle: Ingest -> SQS -> Worker -> Status (COMPLETED)."""
-    # 1. Ingest an order
     ingest_event = {
         "httpMethod": "POST",
         "headers": {
@@ -40,7 +36,6 @@ def test_end_to_end_order_lifecycle(
     ingest_body = json.loads(ingest_resp["body"])
     order_id = ingest_body["orderId"]
 
-    # 2. Check initial status is RECEIVED
     status_event = {
         "rawPath": f"/orders/{order_id}",
         "pathParameters": {"orderId": order_id},
@@ -49,7 +44,6 @@ def test_end_to_end_order_lifecycle(
     assert status_resp["statusCode"] == 200
     assert json.loads(status_resp["body"])["order"]["status"] == OrderStatus.RECEIVED.value
 
-    # 3. Pull message from SQS and pass to Worker Lambda
     sqs = boto3.client("sqs", region_name="us-east-1")
     sqs_res = sqs.receive_message(QueueUrl=setup_sqs["queue_url"], MaxNumberOfMessages=1)
     messages = sqs_res.get("Messages", [])
@@ -67,7 +61,6 @@ def test_end_to_end_order_lifecycle(
     worker_resp = worker_handler(worker_event, lambda_context)
     assert worker_resp == {"batchItemFailures": []}
 
-    # 4. Check final status is COMPLETED
     final_status_resp = status_handler(status_event, lambda_context)
     assert final_status_resp["statusCode"] == 200
     order_data = json.loads(final_status_resp["body"])["order"]
@@ -79,10 +72,8 @@ def test_end_to_end_order_lifecycle(
 def test_dlq_routing_after_max_receive_retries(
     setup_dynamodb: Any, setup_sqs: Any, lambda_context: Any
 ) -> None:
-    """Verify that after maxReceiveCount (3) failures, the message routes to the DLQ."""
     sqs = boto3.client("sqs", region_name="us-east-1")
 
-    # Ingest an order designed to trigger transient failure
     ingest_event = {
         "httpMethod": "POST",
         "headers": {
@@ -101,7 +92,6 @@ def test_dlq_routing_after_max_receive_retries(
     ingest_resp = ingest_handler(ingest_event, lambda_context)
     assert ingest_resp["statusCode"] == 202
 
-    # Simulate 3 processing attempts
     queue_url = setup_sqs["queue_url"]
     dlq_url = setup_sqs["dlq_url"]
 
@@ -109,7 +99,7 @@ def test_dlq_routing_after_max_receive_retries(
         recv = sqs.receive_message(
             QueueUrl=queue_url,
             MaxNumberOfMessages=1,
-            VisibilityTimeout=0,  # make visible immediately on next loop
+            VisibilityTimeout=0,
             AttributeNames=["ApproximateReceiveCount"],
         )
         msgs = recv.get("Messages", [])
@@ -130,8 +120,6 @@ def test_dlq_routing_after_max_receive_retries(
         res = worker_handler(worker_event, lambda_context)
         assert len(res["batchItemFailures"]) == 1
 
-    # After 3 receive attempts with redrive policy, standard SQS moves message to DLQ
-    # In moto / live SQS, verify DLQ receives or is targetable
     dlq_attributes = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=["All"])[
         "Attributes"
     ]

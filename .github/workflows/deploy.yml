@@ -46,6 +46,8 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::293162038789:role/serverless-orders-github-oidc-prod
           aws-region: us-east-1
+          audience: sts.amazonaws.com
+          role-session-name: GitHubActions-TerraformDeploy
 
       - name: Terraform Init
         run: terraform init

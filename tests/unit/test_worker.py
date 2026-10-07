@@ -1,5 +1,3 @@
-"""Unit tests for Worker Lambda handler."""
-
 import json
 from typing import Any
 
@@ -108,7 +106,6 @@ def test_worker_transient_failure_reports_partial_batch_item(
         ]
     }
     result = lambda_handler(event, lambda_context)
-    # The failed item must be reported in batchItemFailures so SQS can retry
     assert result == {"batchItemFailures": [{"itemIdentifier": "msg-transient-fail"}]}
 
 
@@ -128,7 +125,6 @@ def test_worker_permanent_failure_marks_order_failed(
         ]
     }
     result = lambda_handler(event, lambda_context)
-    # Permanent failure should NOT be retried (no batchItemFailures), message is acknowledged
     assert result == {"batchItemFailures": []}
 
     order = get_order(order_id)

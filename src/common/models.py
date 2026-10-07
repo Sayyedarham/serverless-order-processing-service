@@ -1,5 +1,3 @@
-"""Data models for Order Processing Service."""
-
 from enum import StrEnum
 from typing import Any
 

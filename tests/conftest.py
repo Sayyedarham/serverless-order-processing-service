@@ -1,5 +1,3 @@
-"""Shared pytest fixtures, moto mocks, and environment setup."""
-
 import os
 from collections.abc import Generator
 from typing import Any
@@ -8,7 +6,6 @@ import boto3
 import pytest
 from moto import mock_aws
 
-# Configure test environment variables BEFORE importing application code
 os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 os.environ["AWS_REGION"] = "us-east-1"
 os.environ["POWERTOOLS_SERVICE_NAME"] = "test-order-service"
@@ -43,7 +40,6 @@ def lambda_context() -> DummyLambdaContext:
 
 @pytest.fixture(autouse=True)
 def aws_credentials() -> None:
-    """Mocked AWS Credentials for moto."""
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
     os.environ["AWS_SECURITY_TOKEN"] = "testing"
@@ -52,14 +48,12 @@ def aws_credentials() -> None:
 
 @pytest.fixture
 def mocked_aws() -> Generator[None, None, None]:
-    """Provide a clean mock_aws context."""
     with mock_aws():
         yield
 
 
 @pytest.fixture
 def setup_dynamodb(mocked_aws: Any) -> Any:
-    """Create mock DynamoDB table matching production schema."""
     import common.dynamo
 
     common.dynamo._dynamo_resource = None
@@ -91,21 +85,18 @@ def setup_dynamodb(mocked_aws: Any) -> Any:
 
 @pytest.fixture
 def setup_sqs(mocked_aws: Any) -> dict[str, str]:
-    """Create mock SQS standard queue and DLQ with redrive policy."""
     import common.sqs
 
     common.sqs._sqs_client = None
 
     sqs = boto3.client("sqs", region_name="us-east-1")
 
-    # 1. Create DLQ
     dlq_res = sqs.create_queue(QueueName="test-orders-dlq")
     dlq_url = dlq_res["QueueUrl"]
     dlq_arn = sqs.get_queue_attributes(QueueUrl=dlq_url, AttributeNames=["QueueArn"])["Attributes"][
         "QueueArn"
     ]
 
-    # 2. Create Main Queue with redrive policy
     import json
 
     redrive_policy = {
@@ -124,7 +115,6 @@ def setup_sqs(mocked_aws: Any) -> dict[str, str]:
     os.environ["ORDERS_QUEUE_URL"] = queue_url
     os.environ["ORDERS_DLQ_URL"] = dlq_url
 
-    # Update common config
     import common.config
 
     common.config.QUEUE_URL = queue_url

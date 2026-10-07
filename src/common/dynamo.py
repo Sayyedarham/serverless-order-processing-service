@@ -1,5 +1,3 @@
-"""DynamoDB helper client with conditional writes and idempotency guarantees."""
-
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -25,7 +23,6 @@ def get_orders_table() -> Any:
 
 
 def float_to_decimal(obj: Any) -> Any:
-    """Recursively convert float values to Decimal for DynamoDB compatibility."""
     if isinstance(obj, float):
         return Decimal(str(obj))
     if isinstance(obj, dict):
@@ -36,7 +33,6 @@ def float_to_decimal(obj: Any) -> Any:
 
 
 def decimal_to_float(obj: Any) -> Any:
-    """Recursively convert Decimal values back to float/int for JSON responses."""
     if isinstance(obj, Decimal):
         return int(obj) if obj % 1 == 0 else float(obj)
     if isinstance(obj, dict):
@@ -47,23 +43,10 @@ def decimal_to_float(obj: Any) -> Any:
 
 
 class IdempotencyConflictError(Exception):
-    """Raised when an orderId exists with a different idempotency key."""
-
     pass
 
 
 def put_order_if_not_exists(record: OrderRecord) -> tuple[bool, dict[str, Any]]:
-    """
-    Conditionally insert a new order record if orderId does not already exist.
-
-    Returns:
-        (is_new, record_data):
-        - (True, record_data) if newly created.
-        - (False, existing_record) if idempotent duplicate with matching idempotencyKey.
-
-    Raises:
-        IdempotencyConflictError: If orderId exists but idempotencyKey differs.
-    """
     table = get_orders_table()
     item_dict = record.model_dump()
     item_for_dynamo = float_to_decimal(item_dict)
@@ -100,7 +83,6 @@ def update_order_status(
     error_message: str | None = None,
     processed_by: str | None = None,
 ) -> dict[str, Any]:
-    """Update order status and timestamp in DynamoDB."""
     table = get_orders_table()
     now_iso = datetime.now(UTC).isoformat()
 
@@ -133,7 +115,6 @@ def update_order_status(
 
 
 def get_order(order_id: str) -> dict[str, Any] | None:
-    """Retrieve an order by ID from DynamoDB."""
     table = get_orders_table()
     response = table.get_item(Key={"orderId": order_id})
     item = response.get("Item")

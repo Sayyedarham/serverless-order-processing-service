@@ -1,438 +1,1653 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
+   
   <meta charset="UTF-8">
+
+   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Serverless Order Processing Service | Live Interactive Demo</title>
-  <meta name="description" content="Production-grade Serverless Event-Driven Order Processing Service demonstrating fault tolerance, idempotency, observability, and IaC.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <style>
+
+    <title>Serverless Order Processing Service | Live Demo</title>
+
+   
+  <meta name="description"
+    content="Production-grade Serverless Event-Driven Order Processing Service demonstrating fault tolerance, idempotency, observability, and IaC on AWS.">
+
+   
+  <link rel="preconnect" href="https\://fonts.googleapis.com">
+
+   
+  <link rel="preconnect" href="https\://fonts.gstatic.com" crossorigin>
+
+   
+  <link
+    href="https\://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght\@400;500;600&family=IBM+Plex+Sans:wght\@400;500;600&display=swap"
+    rel="stylesheet">
+
+    <style>
     :root {
-      --bg-primary: #0a0e17;
-      --bg-secondary: #121826;
-      --bg-card: rgba(20, 28, 45, 0.75);
-      --border: rgba(255, 255, 255, 0.08);
-      --accent: #3b82f6;
-      --accent-glow: rgba(59, 130, 246, 0.35);
-      --accent-success: #10b981;
-      --accent-warning: #f59e0b;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --font-main: 'Plus Jakarta Sans', system-ui, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --bg: #090c0e;
+      --panel: #0d1114;
+      --input: #090c0e;
+      --line: #252c31;
+      --line2: #1a2024;
+      --text: #d6dde1;
+      --muted: #7e8990;
+      --faint: #4f5960;
+      --green: #73d69a;
+      --amber: #dfb66d;
+      --red: #e47777;
+      --blue: #7db4d7;
+      --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      --sans: "IBM Plex Sans", system-ui, sans-serif
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
-      padding: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden
     }
 
     body {
-      background: radial-gradient(circle at 50% 0%, #1e293b 0%, var(--bg-primary) 70%);
-      color: var(--text-main);
-      font-family: var(--font-main);
-      min-height: 100vh;
-      line-height: 1.6;
-      padding: 2rem 1rem;
+      background: var(--bg);
+      color: var(--text);
+      font: 13px/1.5 var(--mono);
+      display: flex;
+      flex-direction: column
     }
 
-    .container {
-      max-width: 1080px;
-      margin: 0 auto;
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit
     }
 
-    header {
-      text-align: center;
-      margin-bottom: 2.5rem;
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px
     }
 
-    .badge {
-      display: inline-flex;
+    ::-webkit-scrollbar-thumb {
+      background: #30383e
+    }
+
+    #topbar {
+      height: 52px;
+      flex-shrink: 0;
+      background: #0b0f11;
+      border-bottom: 1px solid var(--line);
+      display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.35rem 0.85rem;
-      border-radius: 9999px;
-      font-size: 0.8rem;
+      padding: 0 20px;
+      gap: 13px
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #e1e6e9;
       font-weight: 600;
-      background: rgba(59, 130, 246, 0.15);
-      color: #60a5fa;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      margin-bottom: 1rem;
+      font-size: 12px;
+      white-space: nowrap
     }
 
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--accent-success);
-      box-shadow: 0 0 8px var(--accent-success);
+    .logo-icon {
+      width: 12px;
+      height: 12px;
+      border: 1px solid var(--green);
+      position: relative
     }
 
-    h1 {
-      font-size: 2.4rem;
-      font-weight: 800;
-      letter-spacing: -0.03em;
-      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 0.5rem;
+    .logo-icon:after {
+      content: "";
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--green);
+      left: 3px;
+      top: 3px
     }
 
-    p.subtitle {
-      color: var(--text-muted);
-      font-size: 1.05rem;
-      max-width: 650px;
-      margin: 0 auto;
+    .tb-divider {
+      width: 1px;
+      height: 19px;
+      background: var(--line)
     }
 
-    .grid {
+    .api-label {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .api-label span {
+      color: #aeb8be
+    }
+
+    .spacer {
+      flex: 1
+    }
+
+    .breadcrumb {
+      font-size: 10px;
+      color: var(--faint);
+      white-space: nowrap
+    }
+
+    #layout {
+      flex: 1;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      margin-bottom: 2rem;
+      grid-template-columns: 218px 1fr;
+      min-height: 0;
+      overflow: hidden
     }
 
-    @media (max-width: 768px) {
-      .grid { grid-template-columns: 1fr; }
+    #sidebar {
+      background: #0b0f11;
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      padding: 18px 0
     }
 
-    .card {
-      background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 1.5rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    .sb-section {
+      padding: 0 15px 17px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--line2)
+    }
+
+    .sb-section:last-child {
+      border-bottom: 0
+    }
+
+    .sb-label {
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--faint);
+      font-weight: 600;
+      margin-bottom: 11px
+    }
+
+    .metric-item {
+      margin-bottom: 11px
+    }
+
+    .metric-key {
+      font-size: 9px;
+      color: var(--muted)
+    }
+
+    .metric-val {
+      font-size: 17px;
+      font-weight: 600;
+      color: #d7dde1;
+      line-height: 1.25
+    }
+
+    .metric-val.green {
+      color: var(--green)
+    }
+
+    .metric-val.blue {
+      color: var(--blue)
+    }
+
+    .metric-val.dim {
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    .metric-sub {
+      font-size: 9px;
+      color: var(--faint);
+      margin-top: 1px
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 6px
+    }
+
+    .legend-dot {
+      width: 6px;
+      height: 6px;
+      flex-shrink: 0
+    }
+
+    .arch {
+      font-size: 9px;
+      line-height: 1.8;
+      color: #69747b;
+      white-space: pre;
+      overflow: auto
+    }
+
+    #content {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: 0;
+      overflow: hidden
+    }
+
+    #submit-panel {
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+      padding: 20px 17px;
       display: flex;
       flex-direction: column;
+      gap: 15px
     }
 
-    .card h2 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      color: #e2e8f0;
-    }
-
-    .form-group {
-      margin-bottom: 1rem;
-    }
-
-    label {
-      display: block;
-      font-size: 0.85rem;
+    .panel-title {
+      font-size: 9px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--faint);
       font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 0.35rem;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--line2)
     }
 
-    input, select, textarea {
-      width: 100%;
-      background: rgba(15, 23, 42, 0.8);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.65rem 0.85rem;
-      color: var(--text-main);
-      font-family: var(--font-main);
-      font-size: 0.9rem;
-      transition: all 0.2s ease;
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px
     }
 
-    input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--accent-glow);
+    .field label {
+      font-size: 9px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      background: var(--input);
+      border: 1px solid var(--line);
+      border-radius: 0;
+      padding: 8px 9px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 10px;
+      width: 100%
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 130px
+    }
+
+    .field input:focus,
+    .field textarea:focus,
+    .field select:focus {
+      outline: 0;
+      border-color: #536069
+    }
+
+    .field select option {
+      background: #11161a
+    }
+
+    .row-f {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end
+    }
+
+    .row-f .field {
+      flex: 1
     }
 
     .btn {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      padding: 8px 11px;
+      border: 1px solid var(--line-strong, #343d44);
+      border-radius: 0;
+      cursor: pointer;
+      background: #11171a;
+      color: var(--muted);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 0.5rem;
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      color: white;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 0.75rem 1.25rem;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+      gap: 5px
     }
 
     .btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+      border-color: #59666e;
+      color: #fff;
+      background: #161d21
     }
 
-    .btn:active {
-      transform: translateY(0);
+    .btn.primary {
+      background: #d6dde1;
+      color: #090c0e;
+      border-color: #d6dde1;
+      font-weight: 600
     }
 
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      box-shadow: none;
+    .btn.primary:hover {
+      background: #fff
     }
 
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.1);
-      box-shadow: none;
+    .btn.icon-btn {
+      padding: 7px 9px;
+      height: 31px;
+      flex-shrink: 0
     }
 
-    pre {
-      background: #070a11;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 1rem;
-      font-family: var(--font-mono);
-      font-size: 0.82rem;
-      color: #38bdf8;
-      overflow-x: auto;
-      max-height: 380px;
+    .btn-group {
+      display: flex;
+      gap: 6px
     }
 
-    .status-pill {
-      display: inline-block;
-      padding: 0.2rem 0.6rem;
-      border-radius: 6px;
-      font-size: 0.75rem;
+    .btn-group .btn.primary {
+      flex: 1
+    }
+
+    .manual-check {
+      border-top: 1px solid var(--line2);
+      padding-top: 14px
+    }
+
+    .manual-title {
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 8px
+    }
+
+    #trace-panel {
+      overflow-y: auto;
+      padding: 20px 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 19px
+    }
+
+    .trace-header {
+      display: flex;
+      align-items: baseline;
+      gap: 13px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid var(--line2)
+    }
+
+    .trace-title {
+      font-size: 10px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600
+    }
+
+    .trace-oid {
+      font-size: 10px;
+      color: var(--blue)
+    }
+
+    #status-badge {
+      margin-left: auto;
+      font-size: 9px;
       font-weight: 700;
+      letter-spacing: .08em;
       text-transform: uppercase;
+      padding: 3px 7px;
+      border: 1px solid transparent;
+      display: none
     }
 
-    .status-RECEIVED { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-    .status-PROCESSING { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
-    .status-COMPLETED { background: rgba(16, 185, 129, 0.2); color: #34d399; }
-    .status-FAILED { background: rgba(239, 68, 68, 0.2); color: #f87171; }
-
-    .metrics-bar {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 2rem;
+    .badge-RECEIVED {
+      color: var(--blue);
+      border-color: #31546b
     }
 
-    @media (max-width: 640px) {
-      .metrics-bar { grid-template-columns: repeat(2, 1fr); }
+    .badge-PROCESSING {
+      color: var(--amber);
+      border-color: #69562d
     }
 
-    .metric-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem;
-      text-align: center;
+    .badge-COMPLETED {
+      color: var(--green);
+      border-color: #326448
     }
 
-    .metric-value {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: #60a5fa;
+    .badge-FAILED {
+      color: var(--red);
+      border-color: #683737
     }
 
-    .metric-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
+    .trace-steps {
+      display: flex;
+      flex-direction: column
+    }
+
+    .step {
+      display: flex;
+      gap: 12px;
+      opacity: .28
+    }
+
+    .step.active,
+    .step.error {
+      opacity: 1
+    }
+
+    .step.done {
+      opacity: .72
+    }
+
+    .step-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 17px;
+      flex-shrink: 0
+    }
+
+    .step-dot {
+      width: 9px;
+      height: 9px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      flex-shrink: 0;
+      margin-top: 4px
+    }
+
+    .step.active .step-dot {
+      border-color: var(--amber);
+      background: var(--amber)
+    }
+
+    .step.done .step-dot {
+      border-color: var(--green);
+      background: var(--green)
+    }
+
+    .step.error .step-dot {
+      border-color: var(--red);
+      background: var(--red)
+    }
+
+    .step-conn {
+      flex: 1;
+      width: 1px;
+      background: var(--line2);
+      margin-top: 3px
+    }
+
+    .step-body {
+      flex: 1;
+      padding-bottom: 20px
+    }
+
+    .step:last-child .step-body {
+      padding-bottom: 0
+    }
+
+    .step-num {
+      font-size: 9px;
+      letter-spacing: .1em;
+      color: var(--faint);
       text-transform: uppercase;
+      margin-bottom: 2px
+    }
+
+    .step-name {
+      font-size: 12px;
       font-weight: 600;
+      color: #aab3b8;
+      margin-bottom: 4px
+    }
+
+    .step.active .step-name {
+      color: var(--amber)
+    }
+
+    .step.done .step-name {
+      color: var(--green)
+    }
+
+    .step.error .step-name {
+      color: var(--red)
+    }
+
+    .step-desc {
+      font: 11px/1.72 var(--sans);
+      color: #59646b;
+      max-width: 700px
+    }
+
+    .step.active .step-desc,
+    .step.done .step-desc,
+    .step.error .step-desc {
+      color: #879198
+    }
+
+    .step-detail {
+      margin-top: 8px;
+      font-size: 10px;
+      background: #0a0e10;
+      border: 1px solid var(--line2);
+      padding: 7px 10px;
+      display: none
+    }
+
+    .step-detail.vis {
+      display: block
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 135px minmax(0, 1fr);
+      gap: 10px;
+      padding: 2px 0
+    }
+
+    .k {
+      color: #566169
+    }
+
+    .v {
+      color: #aeb8be;
+      word-break: break-word
+    }
+
+    .green {
+      color: var(--green) !important
+    }
+
+    .red {
+      color: var(--red) !important
+    }
+
+    .amber {
+      color: var(--amber) !important
+    }
+
+    #idle-msg {
+      padding: 65px 20px;
+      text-align: center;
+      color: var(--muted)
+    }
+
+    #idle-msg .cursor {
+      font-size: 20px;
+      color: var(--green);
+      margin-bottom: 11px
+    }
+
+    #idle-msg p {
+      max-width: 620px;
+      margin: auto;
+      font: 11px/1.8 var(--mono)
+    }
+
+    #poll-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 9px 0;
+      color: #879198;
+      font-size: 10px
+    }
+
+    .spin {
+      color: var(--amber);
+      display: inline-block;
+      animation: spin 1.1s linear infinite
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    .log-section {
+      display: none;
+      flex-direction: column
+    }
+
+    .log-section-title {
+      padding: 0 0 7px;
+      color: var(--faint);
+      font-size: 9px;
+      letter-spacing: .1em;
+      text-transform: uppercase
+    }
+
+    .log-section pre {
+      margin: 0;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--line2);
+      background: #080b0d;
+      padding: 11px 13px;
+      color: #68747b;
+      font-size: 9px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word
+    }
+
+    .ll.info {
+      color: var(--blue)
+    }
+
+    .ll.ok {
+      color: var(--green)
+    }
+
+    .ll.err {
+      color: var(--red)
+    }
+
+    .ll.warn {
+      color: var(--amber)
+    }
+
+    .ll.dim {
+      color: #59646b
+    }
+
+    @media(max-width:1050px) {
+      #layout {
+        grid-template-columns: 190px 1fr
+      }
+
+      #content {
+        grid-template-columns: 310px 1fr
+      }
+
+      .api-label {
+        display: none
+      }
+    }
+
+    @media(max-width:800px) {
+
+      html,
+      body {
+        overflow: auto
+      }
+
+      #layout {
+        display: block;
+        overflow: visible
+      }
+
+      #sidebar {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0 15px;
+        padding: 15px
+      }
+
+      .sb-section {
+        margin: 0 0 15px
+      }
+
+      #content {
+        display: block;
+        overflow: visible
+      }
+
+      #submit-panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--line)
+      }
+
+      #trace-panel {
+        overflow: visible;
+        padding: 17px
+      }
+    }
+
+    @media(max-width:520px) {
+      #topbar {
+        padding: 0 12px
+      }
+
+      .breadcrumb {
+        display: none
+      }
+
+      #sidebar {
+        grid-template-columns: 1fr 1fr
+      }
+
+      .trace-oid {
+        max-width: 120px
+      }
+
+      .kv {
+        grid-template-columns: 100px 1fr
+      }
     }
   </style>
+
 </head>
+
 <body>
-  <div class="container">
-    <header>
-      <div class="badge">
-        <span class="badge-dot"></span>
-        <span>AWS Serverless Production API Live</span>
-      </div>
-      <h1>Event-Driven Order Processing Service</h1>
-      <p class="subtitle">Demonstrating AWS Lambda Powertools, SQS Partial Batch Failures, Conditional DynamoDB Idempotency, and IaC.</p>
-    </header>
 
-    <div class="metrics-bar">
-      <div class="metric-card">
-        <div class="metric-value">94.8%</div>
-        <div class="metric-label">Test Coverage</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">419 ms</div>
-        <div class="metric-label">p50 Ingest Latency</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">100%</div>
-        <div class="metric-label">Idempotency Guarantee</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">$0.00</div>
-        <div class="metric-label">Idle Running Cost</div>
-      </div>
-    </div>
+   
 
-    <div class="grid">
-      <!-- Order Ingest Card -->
-      <div class="card">
-        <h2>🚀 Submit New Order (POST /orders)</h2>
-        <div class="form-group">
-          <label for="customerId">Customer Identifier</label>
-          <input type="text" id="customerId" value="cust-portfolio-user">
-        </div>
-        <div class="form-group">
-          <label for="idempotencyKey">Idempotency-Key Header</label>
-          <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="idempotencyKey" readonly>
-            <button class="btn btn-secondary" onclick="generateIdempotencyKey()" title="Generate New UUID">🔄</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="itemSelect">Order Preset</label>
-          <select id="itemSelect" onchange="applyPreset()">
-            <option value="standard">Standard Order (Success Flow)</option>
-            <option value="transient_fail">Simulate Transient Failure (DLQ Flow)</option>
-            <option value="permanent_fail">Simulate Permanent Failure (Fatal Flow)</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="payload">JSON Request Body</label>
-          <textarea id="payload" rows="5"></textarea>
-        </div>
-        <div style="display: flex; gap: 0.75rem; margin-top: auto;">
-          <button class="btn" style="flex: 1;" onclick="submitOrder()">Submit Order</button>
-          <button class="btn btn-secondary" onclick="submitDuplicate()" title="Submit again with exact same Idempotency-Key">Test Replay</button>
-        </div>
-      </div>
+    <div id="topbar">
 
-      <!-- Live Order Status Card -->
-      <div class="card">
-        <h2>📦 Order Status & Trace (GET /orders/{id})</h2>
-        <div class="form-group">
-          <label for="searchOrderId">Order ID (UUID)</label>
-          <div style="display: flex; gap: 0.5rem;">
-            <input type="text" id="searchOrderId" placeholder="Enter Order ID...">
-            <button class="btn btn-secondary" onclick="fetchOrderStatus()">Check</button>
-          </div>
-        </div>
-        <div style="margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between;">
-          <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">Response Log:</span>
-          <span id="statusPill" class="status-pill status-RECEIVED" style="display: none;">RECEIVED</span>
-        </div>
-        <pre id="outputLog">// Responses and real-time polling logs will appear here...</pre>
-      </div>
-    </div>
-  </div>
+        <div class="logo">
 
+            <div class="logo-icon"></div>
+
+            Serverless Order Processing
+
+          </div>
+
+        <div class="tb-divider"></div>
+
+        <div class="api-label">
+
+            AWS API Gateway &nbsp;·&nbsp;
+
+            <span>https\://l67j9sjm76.execute-api.us-east-1.amazonaws.com</span>
+
+            &nbsp;·&nbsp; Lambda + SQS + DynamoDB
+
+          </div>
+
+        <div class="spacer"></div>
+
+        <div class="breadcrumb">us-east-1 &nbsp;/&nbsp; prod</div>
+
+      </div>
+
+   
+
+    <div id="layout">
+
+       
+
+        <aside id="sidebar">
+
+            <div class="sb-section">
+
+                <div class="sb-label">System Metrics</div>
+
+                <div class="metric-item">
+
+                    <div class="metric-key">Test Coverage</div>
+
+                    <div class="metric-val green">94.8%</div>
+
+                    <div class="metric-sub">pytest · 48 assertions</div>
+
+                  </div>
+
+                <div class="metric-item">
+
+                    <div class="metric-key">Idempotency</div>
+
+                    <div class="metric-val green">100%</div>
+
+                    <div class="metric-sub">Conditional DynamoDB writes</div>
+
+                  </div>
+
+                <div class="metric-item">
+
+                    <div class="metric-key">P50 Ingest Latency</div>
+
+                    <div class="metric-val blue">419 ms</div>
+
+                    <div class="metric-sub">API GW → Lambda → SQS ack</div>
+
+                  </div>
+
+                <div class="metric-item">
+
+                    <div class="metric-key">Idle Running Cost</div>
+
+                    <div class="metric-val dim">$0.00 / mo</div>
+
+                    <div class="metric-sub">Pay-per-invoke, no idle</div>
+
+                  </div>
+
+              </div>
+
+            <div class="sb-section">
+
+                <div class="sb-label">Order States</div>
+
+                <div class="legend-item">
+
+                    <div class="legend-dot" style="background:var(--blue)"></div>
+
+                    RECEIVED — enqueued to SQS
+
+                  </div>
+
+                <div class="legend-item">
+
+                    <div class="legend-dot" style="background:var(--yellow)"></div>
+
+                    PROCESSING — worker active
+
+                  </div>
+
+                <div class="legend-item">
+
+                    <div class="legend-dot" style="background:var(--green)"></div>
+
+                    COMPLETED — downstream OK
+
+                  </div>
+
+                <div class="legend-item">
+
+                    <div class="legend-dot" style="background:var(--red)"></div>
+
+                    FAILED — sent to DLQ
+
+                  </div>
+
+              </div>
+
+            <div class="sb-section">
+
+                <div class="sb-label">Architecture</div>
+
+                <div style="font-size:10px; color:var(--text-faint); line-height:2;">
+
+                    POST /orders<br>
+
+                    &nbsp;└─ Ingest Lambda<br>
+
+                    &nbsp;&nbsp;&nbsp;&nbsp;└─ SQS Queue<br>
+
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ Worker Lambda<br>
+
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ Downstream API<br>
+
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ DynamoDB write<br>
+
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ DLQ (on failure)
+
+                  </div>
+
+              </div>
+
+          </aside>
+
+       
+
+        <div id="content">
+
+           
+
+            <section id="submit-panel">
+
+                <div class="panel-title">Submit Order &nbsp;·&nbsp; POST /orders</div>
+
+                <div class="field">
+
+                    <label>Order Preset</label>
+
+                    <select id="itemSelect" onchange="applyPreset()">
+
+                        <option value="standard">Standard Order — Success Flow</option>
+
+                        <option value="transient_fail">Simulate Transient Failure — DLQ Flow</option>
+
+                        <option value="permanent_fail">Simulate Permanent Failure — Fatal Flow</option>
+
+                      </select>
+
+                  </div>
+
+                <div class="field">
+
+                    <label>Customer ID</label>
+
+                    <input type="text" id="customerId" value="cust-portfolio-user">
+
+                  </div>
+
+                <div class="field">
+
+                    <label>Idempotency-Key Header</label>
+
+                    <div class="row-f">
+
+                        <div class="field" style="gap:0;">
+
+                            <input type="text" id="idempotencyKey" readonly>
+
+                          </div>
+
+                        <button class="btn icon-btn" onclick="generateIdempotencyKey()"
+              title="Regenerate UUID">↺</button>
+
+                      </div>
+
+                  </div>
+
+                <div class="field">
+
+                    <label>JSON Request Body</label>
+
+                    <textarea id="payload" rows="8"></textarea>
+
+                  </div>
+
+                <div class="btn-group">
+
+                    <button class="btn primary" onclick="submitOrder()">▶ Submit Order</button>
+
+                    <button class="btn" onclick="submitDuplicate()" title="Replay with same Idempotency-Key">⟳
+            Replay</button>
+
+                  </div>
+
+                <div style="padding-top:0.75rem; border-top:1px solid var(--border-dim);">
+
+                    <div class="panel-title" style="margin-bottom:0.6rem;">Manual Status Check &nbsp;·&nbsp; GET
+            /orders/{id}</div>
+
+                    <div class="row-f">
+
+                        <div class="field" style="gap:0; flex:1;">
+
+                            <input type="text" id="searchOrderId" placeholder="paste order id…">
+
+                          </div>
+
+                        <button class="btn icon-btn" onclick="fetchOrderStatus()" title="Check status">↗</button>
+
+                      </div>
+
+                  </div>
+
+              </section>
+
+           
+
+            <main id="trace-panel">
+
+                <div class="trace-header">
+
+                    <span class="trace-title">Order Status &amp; Trace</span>
+
+                    <span class="trace-oid" id="trace-order-id">—</span>
+
+                    <span id="status-badge"></span>
+
+                  </div>
+
+               
+
+                <div id="idle-msg">
+
+                    <div class="cursor">\_</div>
+
+                    <p>Submit an order on the left to watch the full event-driven lifecycle unfold, step by step, in
+            real time.</p>
+
+                  </div>
+
+               
+
+                <div class="trace-steps" id="trace-steps" style="display:none;">
+
+                   
+
+                    <div class="step" id="step-1">
+
+                        <div class="step-line">
+
+                            <div class="step-dot"></div>
+
+                            <div class="step-conn"></div>
+
+                          </div>
+
+                        <div class="step-body">
+
+                            <div class="step-num">step 01</div>
+
+                            <div class="step-name">HTTP POST → API Gateway</div>
+
+                            <div class="step-desc">
+
+                                Your browser sends a POST request to AWS API Gateway. Along with the order payload,
+
+                                it includes an <strong>Idempotency-Key</strong> header — a unique token that prevents
+
+                                the same order from being processed twice, even if the network hiccups and the
+
+                                request gets retried automatically.
+
+                              </div>
+
+                            <div class="step-detail" id="detail-1">
+
+                                <div class="kv"><span class="k">endpoint</span><span class="v">POST /orders</span></div>
+
+                                <div class="kv"><span class="k">host</span><span class="v" id="d1-host">—</span></div>
+
+                                <div class="kv"><span class="k">idem-key</span><span class="v" id="d1-key">—</span>
+                </div>
+
+                              </div>
+
+                          </div>
+
+                      </div>
+
+                   
+
+                    <div class="step" id="step-2">
+
+                        <div class="step-line">
+
+                            <div class="step-dot"></div>
+
+                            <div class="step-conn"></div>
+
+                          </div>
+
+                        <div class="step-body">
+
+                            <div class="step-num">step 02</div>
+
+                            <div class="step-name">Ingest Lambda — Validate &amp; Enqueue</div>
+
+                            <div class="step-desc">
+
+                                API Gateway wakes up the <strong>Ingest Lambda</strong> in milliseconds. It validates
+
+                                the payload (required fields, schema), mints a UUID as the Order ID, writes a
+
+                                <strong>RECEIVED</strong> record to DynamoDB, then drops the message onto an SQS queue.
+
+                                The function immediately responds with <strong>202 Accepted</strong> — processing
+
+                                continues entirely in the background, so your UI is never blocked.
+
+                              </div>
+
+                            <div class="step-detail" id="detail-2">
+
+                                <div class="kv"><span class="k">http status</span><span class="v"
+                    id="d2-status">—</span></div>
+
+                                <div class="kv"><span class="k">order id</span><span class="v" id="d2-order">—</span>
+                </div>
+
+                                <div class="kv"><span class="k">dynamo write</span><span class="v green">RECEIVED</span>
+                </div>
+
+                                <div class="kv"><span class="k">sqs enqueue</span><span class="v green">OK</span></div>
+
+                              </div>
+
+                          </div>
+
+                      </div>
+
+                   
+
+                    <div class="step" id="step-3">
+
+                        <div class="step-line">
+
+                            <div class="step-dot"></div>
+
+                            <div class="step-conn"></div>
+
+                          </div>
+
+                        <div class="step-body">
+
+                            <div class="step-num">step 03</div>
+
+                            <div class="step-name">SQS Queue — Message Buffered</div>
+
+                            <div class="step-desc">
+
+                                The order message sits safely inside an <strong>SQS Standard Queue</strong>. SQS is
+
+                                a durable buffer — if the Worker Lambda crashes mid-flight, SQS automatically
+
+                                re-delivers the message (up to 3 retries). After 3 failures, the message is moved to
+
+                                a <strong>Dead-Letter Queue (DLQ)</strong> for manual inspection. This is the
+
+                                backbone of fault tolerance in this architecture.
+
+                              </div>
+
+                            <div class="step-detail" id="detail-3">
+
+                                <div class="kv"><span class="k">queue</span><span class="v">orders-queue</span></div>
+
+                                <div class="kv"><span class="k">visibility</span><span class="v">30 s</span></div>
+
+                                <div class="kv"><span class="k">max retries</span><span class="v">3 → DLQ</span></div>
+
+                              </div>
+
+                          </div>
+
+                      </div>
+
+                   
+
+                    <div class="step" id="step-4">
+
+                        <div class="step-line">
+
+                            <div class="step-dot"></div>
+
+                            <div class="step-conn"></div>
+
+                          </div>
+
+                        <div class="step-body">
+
+                            <div class="step-num">step 04</div>
+
+                            <div class="step-name" id="step4-name">Worker Lambda — Processing</div>
+
+                            <div class="step-desc" id="step4-desc">
+
+                                SQS triggers the <strong>Worker Lambda</strong>. It picks up the order, marks it as
+
+                                <strong>PROCESSING</strong> in DynamoDB, then calls the downstream fulfillment API.
+
+                                A partial-batch failure handler ensures that if this order fails, only this specific
+
+                                message is retried — not the entire batch of messages delivered together.
+
+                              </div>
+
+                            <div class="step-detail" id="detail-4">
+
+                                <div class="kv"><span class="k">dynamo status</span><span class="v yellow"
+                    id="d4-status">PROCESSING</span></div>
+
+                                <div class="kv"><span class="k">downstream</span><span class="v"
+                    id="d4-downstream">—</span></div>
+
+                                <div class="kv"><span class="k">batch handler</span><span class="v">partial-batch
+                    failure</span></div>
+
+                              </div>
+
+                          </div>
+
+                      </div>
+
+                   
+
+                    <div class="step" id="step-5">
+
+                        <div class="step-line">
+
+                            <div class="step-dot"></div>
+
+                           
+
+                          </div>
+
+                        <div class="step-body">
+
+                            <div class="step-num">step 05</div>
+
+                            <div class="step-name" id="step5-name">Final State</div>
+
+                            <div class="step-desc" id="step5-desc">
+
+                                Waiting for the worker to resolve the order to its final state.
+
+                              </div>
+
+                            <div class="step-detail" id="detail-5">
+
+                                <div class="kv"><span class="k">final status</span><span class="v"
+                    id="d5-status">—</span></div>
+
+                                <div class="kv"><span class="k">updated at</span><span class="v"
+                    id="d5-updated">—</span></div>
+
+                                <div class="kv"><span class="k">customer id</span><span class="v"
+                    id="d5-customer">—</span></div>
+
+                              </div>
+
+                          </div>
+
+                      </div>
+
+                  </div>
+
+               
+
+                <div id="poll-indicator">
+
+                    <span class="spin">⟳</span>
+
+                    &nbsp; polling GET /orders/{id} every 3 s &nbsp;·&nbsp;
+
+                    attempt <span id="poll-count">0</span> / 5
+
+                  </div>
+
+               
+
+                <div class="log-section" id="log-section" style="display:none;">
+
+                    <div class="log-section-title">Raw HTTP Log</div>
+
+                   
+          <pre id="raw-log"></pre>
+
+                 
+        </div>
+
+              </main>
+
+          </div>
+
+      </div>
+
+   
   <script>
-    const API_BASE = "https://l67j9sjm76.execute-api.us-east-1.amazonaws.com";
+
+    const API_BASE = "https\://l67j9sjm76.execute-api.us-east-1.amazonaws.com";
+
+    /\* utils \*/
+
+    function ts() { return new * Date * ().toISOString().substring(11, 23); }
+
+    function appendLog(* msg*, * cls* = '') {
+
+      const el = document.getElementById('raw-log');
+
+      el.innerHTML += `<span class="ll ${* cls *}">[${ts()}] ${* msg *}\n</span>`;
+
+      el.scrollTop = el.scrollHeight;
+
+    }
+
+    function clearLog() { document.getElementById('raw-log').innerHTML = ''; }
+
+    /\* step helpers \*/
+
+    function resetSteps() {
+
+      for (let i = 1; i <= 5; i++) {
+
+        document.getElementById(`step-${i}`).className = 'step';
+
+        const d = document.getElementById(`detail-${i}`);
+
+        if (d) d.classList.remove('vis');
+
+      }
+
+    }
+
+    function setStep(* n*, * state*) {
+
+      document.getElementById(`step-${* n *}`).className = `step ${* state *}`;
+
+      const d = document.getElementById(`detail-${* n *}`);
+
+      if (d) d.classList.add('vis');
+
+    }
+
+    function showBadge(* status*) {
+
+      const b = document.getElementById('status-badge');
+
+      b.className = `badge-${* status *}`;
+
+      b.textContent = * status *;
+
+      b.style.display = 'inline-block';
+
+    }
+
+    function showTrace() {
+
+      document.getElementById('idle-msg').style.display = 'none';
+
+      document.getElementById('trace-steps').style.display = 'flex';
+
+      document.getElementById('log-section').style.display = 'flex';
+
+    }
+
+    /\* init \*/
 
     function generateIdempotencyKey() {
-      const key = 'idem-' + crypto.randomUUID();
-      document.getElementById('idempotencyKey').value = key;
+
+      document.getElementById('idempotencyKey').value = 'idem-' + crypto.randomUUID();
+
     }
 
     function applyPreset() {
-      const preset = document.getElementById('itemSelect').value;
-      let customerId = "cust-portfolio-user";
-      if (preset === "transient_fail") customerId = "sim-fail-transient";
-      if (preset === "permanent_fail") customerId = "sim-fail-permanent";
 
-      document.getElementById('customerId').value = customerId;
+      const preset = document.getElementById('itemSelect').value;
+
+      let cid = 'cust-portfolio-user';
+
+      if (preset === 'transient_fail') cid = 'sim-fail-transient';
+
+      if (preset === 'permanent_fail') cid = 'sim-fail-permanent';
+
+      document.getElementById('customerId').value = cid;
+
       document.getElementById('payload').value = JSON.stringify({
-        customer_id: customerId,
+
+        customer_id: cid,
+
         items: [
-          { item_id: "sku-item-1", name: "High-Performance Compute", quantity: 1, price: 49.99 },
-          { item_id: "sku-item-2", name: "NVMe Storage Block", quantity: 2, price: 15.00 }
+
+          { item_id: 'sku-item-1', name: 'High-Performance Compute', quantity: 1, price: 49.99 },
+
+          { item_id: 'sku-item-2', name: 'NVMe Storage Block', quantity: 2, price: 15.00 }
+
         ]
+
       }, null, 2);
+
     }
 
-    async function submitOrder() {
-      const key = document.getElementById('idempotencyKey').value;
-      const payloadStr = document.getElementById('payload').value;
-      const log = document.getElementById('outputLog');
+    /\* submit \*/
 
-      log.textContent = `[POST] Sending order to ${API_BASE}/orders...\nIdempotency-Key: ${key}\n`;
+    async function submitOrder() {
+
+      const key = document.getElementById('idempotencyKey').value;
+
+      const body = document.getElementById('payload').value;
+
+      showTrace();
+
+      clearLog();
+
+      resetSteps();
+
+      document.getElementById('status-badge').style.display = 'none';
+
+      document.getElementById('trace-order-id').textContent = '—';
+
+      document.getElementById('poll-indicator').style.display = 'none';
+
+      setStep(1, 'active');
+
+      document.getElementById('d1-host').textContent = 'l67j9sjm76.execute-api.us-east-1.amazonaws.com';
+
+      document.getElementById('d1-key').textContent = key;
+
+      appendLog(`POST ${API_BASE}/orders`, 'info');
+
+      appendLog(`Idempotency-Key: ${key}`, 'dim');
+
+      let data, httpStatus;
 
       try {
-        const res = await fetch(`${API_BASE}/orders`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Idempotency-Key': key
-          },
-          body: payloadStr
-        });
-        const data = await res.json();
-        log.textContent += `[${res.status} ${res.statusText}]\n` + JSON.stringify(data, null, 2) + "\n";
 
-        if (data.orderId) {
-          document.getElementById('searchOrderId').value = data.orderId;
-          log.textContent += `\n>> Polling order status for ${data.orderId}...\n`;
-          pollStatus(data.orderId);
-        }
+        const res = await fetch(`${API_BASE}/orders`, {
+
+          method: 'POST',
+
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
+
+          body
+
+        });
+
+        httpStatus = res.status;
+
+        data = await res.json();
+
+        appendLog(`← ${res.status} ${res.statusText}`, res.ok ? 'ok' : 'err');
+
+        appendLog(JSON.stringify(data, null, 2), 'dim');
+
       } catch (err) {
-        log.textContent += `\n[Error] ${err.message}`;
+
+        setStep(1, 'error');
+
+        appendLog(`Error: ${err.message}`, 'err');
+
+        return;
+
       }
+
+      setStep(1, 'done');
+
+      setStep(2, 'active');
+
+      appendLog('Ingest Lambda validated payload, wrote RECEIVED, enqueued SQS…', 'info');
+
+      if (data.orderId) {
+
+        const oid = data.orderId;
+
+        document.getElementById('trace-order-id').textContent = oid;
+
+        document.getElementById('searchOrderId').value = oid;
+
+        document.getElementById('d2-status').textContent = `${httpStatus} Accepted`;
+
+        document.getElementById('d2-order').textContent = oid;
+
+        showBadge('RECEIVED');
+
+        setStep(2, 'done');
+
+        setStep(3, 'done');
+
+        appendLog('Message buffered in SQS, Worker Lambda will pick it up shortly…', 'ok');
+
+        setStep(4, 'active');
+
+        appendLog('Worker Lambda triggered by SQS, processing…', 'info');
+
+        pollStatus(oid, 0);
+
+      } else {
+
+        setStep(2, 'done');
+
+        appendLog('Response received (possibly idempotent replay — no new orderId).', 'warn');
+
+      }
+
     }
 
     async function submitDuplicate() {
-      const log = document.getElementById('outputLog');
-      log.textContent += `\n[REPLAY] Resubmitting duplicate with identical Idempotency-Key...\n`;
+
+      appendLog('--- Replay: resubmitting with identical Idempotency-Key ---', 'warn');
+
       await submitOrder();
+
     }
 
-    async function fetchOrderStatus() {
-      const orderId = document.getElementById('searchOrderId').value.trim();
-      if (!orderId) return;
-      const log = document.getElementById('outputLog');
-      log.textContent = `[GET] Fetching ${API_BASE}/orders/${orderId}...\n`;
+    /\* poll \*/
+
+    async function pollStatus(* orderId*, * attempts*) {
+
+      if (* attempts * > 5) {
+
+        document.getElementById('poll-indicator').style.display = 'none';
+
+        appendLog('Max poll attempts reached. Use manual check.', 'warn');
+
+        return;
+
+      }
+
+      const pi = document.getElementById('poll-indicator');
+
+      pi.style.display = 'flex';
+
+      document.getElementById('poll-count').textContent = * attempts * + 1;
+
+      await new Promise(r *=>* setTimeout(r, 3000));
 
       try {
-        const res = await fetch(`${API_BASE}/orders/${orderId}`);
+
+        const res = await fetch(`${API_BASE}/orders/${* orderId *}`);
+
         const data = await res.json();
-        log.textContent += `[${res.status} ${res.statusText}]\n` + JSON.stringify(data, null, 2);
 
-        if (data.order && data.order.status) {
-          const pill = document.getElementById('statusPill');
-          pill.className = `status-pill status-${data.order.status}`;
-          pill.textContent = data.order.status;
-          pill.style.display = 'inline-block';
+        const st = data.order?.status || 'UNKNOWN';
+
+        appendLog(`[poll ${* attempts * + 1}] status = ${st}`, st === 'COMPLETED' ? 'ok' : (st === 'FAILED' ? 'err' : 'info'));
+
+        if (st === 'COMPLETED' || st === 'FAILED') {
+
+          pi.style.display = 'none';
+
+          const isOk = st === 'COMPLETED';
+
+          setStep(4, isOk ? 'done' : 'error');
+
+          document.getElementById('d4-status').textContent = st;
+
+          document.getElementById('d4-status').className = `v ${isOk ? 'green' : 'red'}`;
+
+          document.getElementById('d4-downstream').textContent = isOk ? 'OK' : 'FAILED';
+
+          setStep(5, isOk ? 'done' : 'error');
+
+          document.getElementById('step5-name').textContent = isOk
+
+            ? 'Final State — Order Completed ✓'
+
+            : 'Final State — Order Failed (→ DLQ)';
+
+          document.getElementById('step5-desc').textContent = isOk
+
+            ? 'The Worker Lambda successfully called the downstream fulfillment API and wrote COMPLETED to DynamoDB. The order lifecycle is fully complete.'
+
+            : 'The Worker Lambda encountered an error. After exhausting all SQS retry attempts, the message was moved to the Dead-Letter Queue (DLQ) for manual investigation. The order status is FAILED.';
+
+          document.getElementById('d5-status').textContent = st;
+
+          document.getElementById('d5-status').className = `v ${isOk ? 'green' : 'red'}`;
+
+          document.getElementById('d5-updated').textContent = data.order?.updated_at || '—';
+
+          document.getElementById('d5-customer').textContent = data.order?.customer_id || '—';
+
+          showBadge(st);
+
+          appendLog(`Final state reached: ${st}`, isOk ? 'ok' : 'err');
+
+        } else {
+
+          pollStatus(* orderId *, * attempts * + 1);
+
         }
+
       } catch (err) {
-        log.textContent += `\n[Error] ${err.message}`;
+
+        pi.style.display = 'none';
+
+        appendLog(`Poll error: ${err.message}`, 'err');
+
       }
+
     }
 
-    async function pollStatus(orderId, attempts = 0) {
-      if (attempts > 5) return;
-      setTimeout(async () => {
+    /\* manual check \*/
+
+    async function fetchOrderStatus() {
+
+      const orderId = document.getElementById('searchOrderId').value.trim();
+
+      if (!orderId) return;
+
+      showTrace();
+
+      clearLog();
+
+      document.getElementById('trace-order-id').textContent = orderId;
+
+      appendLog(`GET ${API_BASE}/orders/${orderId}`, 'info');
+
+      try {
+
         const res = await fetch(`${API_BASE}/orders/${orderId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const log = document.getElementById('outputLog');
-          log.textContent += `[Poll ${attempts + 1}] Status: ${data.order?.status || 'UNKNOWN'}\n`;
-          if (data.order?.status === 'COMPLETED' || data.order?.status === 'FAILED') {
-            log.textContent += `\n>> Final state reached: ${data.order.status}\n` + JSON.stringify(data, null, 2);
-            const pill = document.getElementById('statusPill');
-            pill.className = `status-pill status-${data.order.status}`;
-            pill.textContent = data.order.status;
-            pill.style.display = 'inline-block';
-          } else {
-            pollStatus(orderId, attempts + 1);
-          }
+
+        const data = await res.json();
+
+        appendLog(`← ${res.status} ${res.statusText}`, res.ok ? 'ok' : 'err');
+
+        appendLog(JSON.stringify(data, null, 2), 'dim');
+
+        const st = data.order?.status;
+
+        if (st) {
+
+          showBadge(st);
+
+          document.getElementById('d5-status').textContent = st;
+
+          document.getElementById('d5-updated').textContent = data.order?.updated_at || '—';
+
+          document.getElementById('d5-customer').textContent = data.order?.customer_id || '—';
+
         }
-      }, 3000);
+
+      } catch (err) {
+
+        appendLog(`Error: ${err.message}`, 'err');
+
+      }
+
     }
 
-    // Initialize
+    /\* boot \*/
+
     generateIdempotencyKey();
+
     applyPreset();
+
   </script>
+
 </body>
+
 </html>
