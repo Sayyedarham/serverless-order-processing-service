@@ -1,3 +1,4 @@
+import time
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -121,3 +122,25 @@ def get_order(order_id: str) -> dict[str, Any] | None:
     if not item:
         return None
     return decimal_to_float(item)  # type: ignore[no-any-return]
+
+
+def get_or_create_fulfillment(fulfillment_key: str, result: dict[str, Any]) -> dict[str, Any]:
+    """Persist one successful simulated fulfillment result for safe worker retries."""
+    table = get_orders_table()
+    item = {
+        "orderId": f"FULFILLMENT#{fulfillment_key}",
+        "operation": "FULFILLMENT",
+        "result": result,
+        # SQS can retain a message in the source queue and DLQ for up to 18 days.
+        "expiresAt": int(time.time()) + 30 * 86400,
+    }
+    try:
+        table.put_item(Item=item, ConditionExpression="attribute_not_exists(orderId)")
+        return result
+    except ClientError as err:
+        if err.response.get("Error", {}).get("Code") != "ConditionalCheckFailedException":
+            raise
+        existing = table.get_item(Key={"orderId": item["orderId"]}).get("Item")
+        if not existing:
+            raise
+        return decimal_to_float(existing["result"])  # type: ignore[no-any-return]

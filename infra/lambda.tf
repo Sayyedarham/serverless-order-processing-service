@@ -86,7 +86,6 @@ resource "aws_lambda_function" "worker" {
     variables = {
       ORDERS_TABLE_NAME            = aws_dynamodb_table.orders.name
       ORDERS_QUEUE_URL             = aws_sqs_queue.orders_queue.id
-      DOWNSTREAM_FAILURE_RATE      = var.downstream_failure_rate
       POWERTOOLS_SERVICE_NAME      = "order-worker"
       POWERTOOLS_METRICS_NAMESPACE = "OrderProcessingService"
     }

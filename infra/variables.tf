@@ -28,12 +28,6 @@ variable "api_shared_key" {
   default     = ""
 }
 
-variable "downstream_failure_rate" {
-  description = "Downstream service injected failure rate (0.0 to 1.0) for testing"
-  type        = string
-  default     = "0.0"
-}
-
 variable "github_repo" {
   description = "GitHub repository name (owner/repo) for OIDC trust"
   type        = string

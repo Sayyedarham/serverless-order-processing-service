@@ -1,0 +1,103 @@
+# Reliability Design
+
+This document defines the order pipeline's reliability contract. It distinguishes the current baseline from the target behavior so documentation does not imply guarantees the code does not yet provide.
+
+## Current Baseline
+
+The current code conditionally creates one DynamoDB order item per UUIDv5 idempotency key, sends a new order to SQS, and skips worker messages only when the order is already `COMPLETED`. SQS retries failed records and moves them to the DLQ after the configured receive count.
+
+These mechanisms do **not** currently guarantee durable enqueue after an ingest failure, enforced state transitions, or an order status that reflects DLQ arrival. See [audit.md](audit.md) for the pre-change findings and configuration details. The invariants below are the target contract; they are not claims that the baseline already satisfies them.
+
+## Phase 3: Simulated Fulfillment
+
+The worker now calls a deterministic in-process fulfillment simulation. It uses the stable key `{orderId}:FULFILLMENT` and stores a successful result as a separate item in the existing DynamoDB table. Repeated successful calls return the stored result. The operation item uses the existing table TTL with a 30-day expiration, longer than the configured source-queue plus DLQ retention window.
+
+Supported demo behaviors are normal success, `customer_id: "sim-delay"` (a fixed 100 ms delay then success), `customer_id: "sim-timeout"` or the legacy `sim-fail-transient` (retryable timeout), and `customer_id: "sim-fail"` or the legacy `sim-fail-permanent` (permanent rejection). Timeout and rejection outcomes do not create a successful fulfillment record. These selectors are currently caller-controlled, matching the pre-existing demo convention; Phase 9 must scope failure injection to bounded verification runs before treating them as a safe public feature.
+
+This models an idempotent **simulated result**, not an external payment or shipping side effect. A real downstream provider must enforce the same key at the side-effect boundary. SQS remains at-least-once, and this change alone does not make order state transitions conditional.
+
+## Target Invariants
+
+### 1. Idempotent order acceptance
+
+- An idempotency key identifies one logical order within the documented key scope.
+- Concurrent requests with the same key create at most one order item.
+- Replays return the existing order and never create a second logical fulfillment.
+- Reuse of a key with a different normalized request is rejected as a conflict; it must not silently return an order for different content.
+- An HTTP `202` response is returned only after both the order and its work are durably recoverable. If enqueue publication has an ambiguous outcome, retry may publish a duplicate message; the worker and fulfillment operation must safely absorb it.
+
+### 2. No accepted work is silently lost
+
+- Every accepted order has durable order state and durable work available to the worker, or has an explicit terminal outcome.
+- Temporary failures remain retryable. Exhausted messages are observable in the DLQ, and the order record reflects that state.
+- Malformed or uncorrelatable messages are not silently acknowledged. They must be recorded as an explicit rejected/poison-message outcome or sent to the DLQ for inspection.
+- SQS is at-least-once: duplicate delivery is expected and handled. The system does not claim exactly-once message delivery.
+
+### 3. Valid, conditional state transitions
+
+Order lifecycle states:
+
+```text
+RECEIVED -> PROCESSING -> COMPLETED
+                 |             (terminal)
+                 +-----------> FAILED
+                 |             (terminal until operator redrive)
+                 +-----------> DLQ
+                               (terminal until operator redrive)
+
+FAILED -> RECEIVED       explicit redrive only
+DLQ    -> RECEIVED       explicit redrive only
+```
+
+- `RECEIVED -> PROCESSING` begins an attempt.
+- A transient failure keeps the order retryable; another delivery may enter/re-enter `PROCESSING`.
+- `COMPLETED` is terminal. No later delivery may regress it or repeat the fulfillment effect.
+- `FAILED` records a non-retryable business failure. Reprocessing requires an explicit operator action.
+- `DLQ` records exhausted delivery. A redrive changes it to `RECEIVED` (or a separately represented retry state) before the message is made available again.
+- Writes that change lifecycle state use DynamoDB conditions so stale or concurrent workers cannot perform invalid regressions. Attempt counters and timestamps are updated atomically with each transition.
+- Queue publication state is tracked separately from business lifecycle state. This allows a retry of an ingest request to repair an incomplete enqueue without claiming that an unqueued order is being processed.
+
+### 4. Retry-safe fulfillment
+
+- Each order's simulated fulfillment uses a stable operation key, `orderId + operation`.
+- The fulfillment operation stores its result durably and conditionally creates it once. Repeated calls with the same key return that result.
+- A worker can crash after fulfillment succeeds and before it writes `COMPLETED`; the next delivery receives the stored fulfillment result and can finish the order without creating another logical operation.
+- This is an idempotent-effect guarantee for the simulated operation, not exactly-once SQS delivery or exactly-once execution.
+
+### 5. DLQ recovery
+
+- Exhausted messages remain inspectable in the DLQ and correlate to an order and message.
+- DLQ arrival is observable and represented in order state.
+- Redrive is explicit, bounded, and auditable. It resets only eligible orders/messages and preserves the fulfillment operation key so a prior successful effect is not repeated.
+- A redrive test must demonstrate successful completion after the injected failure is removed.
+
+### 6. Bounded verification and failure injection
+
+- Verification requests create bounded asynchronous work; the HTTP request does not wait for the suite.
+- Every run has a fixed scenario allowlist, request/message ceiling, execution deadline, and retention period.
+- Failure injection is disabled by default, scoped to one verification run/scenario, limited by affected message count, and expires automatically.
+- Public callers cannot select arbitrary operations, unbounded request counts, or persistent failure rates.
+
+## Correlation Fields
+
+Logs and verification results should carry the identifiers that exist for that operation:
+
+```text
+verification_run_id (verification only)
+scenario_id          (verification only)
+order_id
+idempotency_key
+correlation_id
+message_id           (worker/SQS)
+```
+
+Fields should be passed in SQS message attributes/body as appropriate and included in structured logs. Request bodies and secrets should not be logged.
+
+## Guarantee Language
+
+Use these terms precisely:
+
+- **At-least-once delivery:** SQS may deliver a message more than once; the worker must tolerate that.
+- **Idempotent fulfillment:** repeated operation calls with the same stable key return one durable logical result.
+- **No silent loss:** accepted work remains recoverable or reaches a documented terminal state, subject to the stated AWS service and retention assumptions.
+- Do not claim **exactly once**, **zero cost**, or **high availability**. The target design controls duplicate effects through idempotency and documents cost assumptions; it cannot guarantee those broader properties.

@@ -67,7 +67,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 processed_by=getattr(context, "function_name", "local-worker"),
             )
 
-            call_downstream_fulfillment(order_id=order_id, order_data=current_order)
+            fulfillment_key = f"{order_id}:FULFILLMENT"
+            call_downstream_fulfillment(
+                order_id=order_id,
+                fulfillment_key=fulfillment_key,
+                order_data=current_order,
+            )
 
             update_order_status(order_id=order_id, status=OrderStatus.COMPLETED)
             elapsed_ms = (time.perf_counter() - start_time) * 1000.0
