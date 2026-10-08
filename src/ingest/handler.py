@@ -7,7 +7,7 @@ from aws_lambda_powertools.metrics import MetricUnit
 from pydantic import ValidationError
 
 from common.config import SERVICE_KEY, TTL_DAYS, logger, metrics, tracer
-from common.dynamo import IdempotencyConflictError, put_order_if_not_exists
+from common.dynamo import IdempotencyConflictError, mark_order_enqueued, put_order_if_not_exists
 from common.models import OrderCreateRequest, OrderRecord, OrderStatus
 from common.sqs import send_order_message
 
@@ -129,12 +129,15 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             {"error": "Conflict", "message": str(err)},
         )
 
-    if is_new:
+    if saved_record.get("enqueueStatus") != "ENQUEUED":
         send_order_message(
             order_id=order_id,
             idempotency_key=idempotency_key,
             payload=order_req.model_dump(),
         )
+        mark_order_enqueued(order_id)
+
+    if is_new:
         metrics.add_metric(name="OrdersReceived", unit=MetricUnit.Count, value=1)
         logger.info("Order accepted and queued", extra={"order_id": order_id})
         status_code = 202

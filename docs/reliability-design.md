@@ -4,9 +4,9 @@ This document defines the order pipeline's reliability contract. It distinguishe
 
 ## Current Baseline
 
-The current code conditionally creates one DynamoDB order item per UUIDv5 idempotency key, sends a new order to SQS, and skips worker messages only when the order is already `COMPLETED`. SQS retries failed records and moves them to the DLQ after the configured receive count.
+The current code conditionally creates one DynamoDB order item per UUIDv5 idempotency key, rejects a replay with different order content, records whether queue publication succeeded, and repairs a pending publication when the client retries. The worker skips messages only when the order is already `COMPLETED`. SQS retries failed records and moves them to the DLQ after the configured receive count.
 
-These mechanisms do **not** currently guarantee durable enqueue after an ingest failure, enforced state transitions, or an order status that reflects DLQ arrival. See [audit.md](audit.md) for the pre-change findings and configuration details. The invariants below are the target contract; they are not claims that the baseline already satisfies them.
+Queue repair depends on a client retry; there is no background sweeper or transactional outbox. State transitions are not generally conditional, and malformed records can still be acknowledged without an explicit poison-message outcome. See [audit.md](audit.md) for pre-change audit findings. The invariants below remain the target contract; they are not claims that every invariant is satisfied.
 
 ## Phase 3: Simulated Fulfillment
 
@@ -31,6 +31,16 @@ This is an operator-run application-level redrive, not SQS's unbounded `StartMes
 ## Phase 6: Bounded Verification
 
 The manual GitHub Actions verification workflow accepts only the fixed `retry-window` and `dlq-recovery` scenarios. Each run executes one local Moto test, creates no AWS work, has a 10-minute job deadline, and retains its result artifact for seven days. Transient failure injection exists only in the test process; the public API cannot request it. This keeps verification asynchronous at the workflow level and bounds its scenarios, order/message count, execution time, and result retention.
+
+## Phase 7: Idempotency Content Conflicts
+
+An idempotency-key replay returns the existing order only when its normalized customer, items, and total match. Reusing the key for different order content returns HTTP `409 Conflict` and does not enqueue another message. The normalized Pydantic order data is compared with persisted order fields, so no separate fingerprint field or migration is needed.
+
+## Phase 8: Recoverable Queue Publication
+
+New orders start with `enqueueStatus = PENDING`. Ingest publishes work to SQS and marks the row `ENQUEUED` only after `SendMessage` succeeds. If publication fails, the request fails and the row remains pending; retrying the same key and same order content repairs publication. A successful response is returned only after publication and the enqueue-state write succeed. If the SQS send succeeded but its response was lost, retry can publish a duplicate; worker idempotency absorbs that at-least-once delivery.
+
+This repair is client-driven: if the caller never retries after a failed request, no background process republishes the pending order.
 
 ## Target Invariants
 

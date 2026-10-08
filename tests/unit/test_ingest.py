@@ -1,4 +1,5 @@
 import base64
+import importlib
 import json
 from typing import Any
 
@@ -7,6 +8,8 @@ import pytest
 
 from common.models import OrderStatus
 from ingest.handler import lambda_handler
+
+ingest_module = importlib.import_module("ingest.handler")
 
 
 @pytest.mark.unit
@@ -161,6 +164,80 @@ def test_ingest_duplicate_submission_is_idempotent(
     sqs = boto3.client("sqs", region_name="us-east-1")
     messages = sqs.receive_message(QueueUrl=setup_sqs["queue_url"], MaxNumberOfMessages=10).get(
         "Messages", []
+    )
+    assert len(messages) == 1
+
+
+@pytest.mark.unit
+def test_idempotency_key_reuse_with_different_order_returns_conflict(
+    setup_dynamodb: Any, setup_sqs: Any, lambda_context: Any
+) -> None:
+    headers = {"Idempotency-Key": "same-key-different-order", "X-Service-Key": "test-secret-key"}
+    first = {
+        "customer_id": "cust-idempotent",
+        "items": [{"item_id": "sku-1", "name": "Keyboard", "quantity": 1, "price": 50.0}],
+    }
+    changed = {
+        "customer_id": "cust-idempotent",
+        "items": [{"item_id": "sku-1", "name": "Mouse", "quantity": 1, "price": 50.0}],
+    }
+    first_response = lambda_handler(
+        {"httpMethod": "POST", "headers": headers, "body": json.dumps(first)}, lambda_context
+    )
+    conflict = lambda_handler(
+        {"httpMethod": "POST", "headers": headers, "body": json.dumps(changed)}, lambda_context
+    )
+
+    assert first_response["statusCode"] == 202
+    assert conflict["statusCode"] == 409
+    messages = (
+        boto3.client("sqs", region_name="us-east-1")
+        .receive_message(QueueUrl=setup_sqs["queue_url"], MaxNumberOfMessages=10)
+        .get("Messages", [])
+    )
+    assert len(messages) == 1
+
+
+@pytest.mark.unit
+def test_duplicate_repairs_enqueue_after_send_failure(
+    setup_dynamodb: Any,
+    setup_sqs: Any,
+    lambda_context: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = {
+        "httpMethod": "POST",
+        "headers": {
+            "Idempotency-Key": "enqueue-repair-key",
+            "X-Service-Key": "test-secret-key",
+        },
+        "body": json.dumps(
+            {
+                "customer_id": "cust-repair",
+                "items": [{"item_id": "sku-1", "name": "Keyboard", "quantity": 1, "price": 50}],
+            }
+        ),
+    }
+    original_send = ingest_module.send_order_message
+
+    def fail_send(**kwargs: Any) -> str:
+        raise RuntimeError("temporary SQS outage")
+
+    monkeypatch.setattr(ingest_module, "send_order_message", fail_send)
+
+    with pytest.raises(RuntimeError, match="temporary SQS outage"):
+        lambda_handler(event, lambda_context)
+
+    monkeypatch.setattr(ingest_module, "send_order_message", original_send)
+    retry = lambda_handler(event, lambda_context)
+    assert retry["statusCode"] == 200
+    order_id = json.loads(retry["body"])["orderId"]
+    stored = setup_dynamodb.get_item(Key={"orderId": order_id})["Item"]
+    assert stored["enqueueStatus"] == "ENQUEUED"
+    messages = (
+        boto3.client("sqs", region_name="us-east-1")
+        .receive_message(QueueUrl=setup_sqs["queue_url"], MaxNumberOfMessages=10)
+        .get("Messages", [])
     )
     assert len(messages) == 1
 

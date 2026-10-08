@@ -66,7 +66,15 @@ def put_order_if_not_exists(record: OrderRecord) -> tuple[bool, dict[str, Any]]:
                 extra={"order_id": record.orderId, "idempotency_key": record.idempotencyKey},
             )
             existing = get_order(record.orderId)
-            if existing and existing.get("idempotencyKey") == record.idempotencyKey:
+            same_request = existing and all(
+                existing.get(field) == item_dict[field]
+                for field in ("customerId", "items", "totalAmount")
+            )
+            if (
+                existing
+                and existing.get("idempotencyKey") == record.idempotencyKey
+                and same_request
+            ):
                 logger.info(
                     "Idempotent duplicate order request detected",
                     extra={"order_id": record.orderId},
@@ -113,6 +121,18 @@ def update_order_status(
     )
     attributes = response.get("Attributes", {})
     return decimal_to_float(attributes)  # type: ignore[no-any-return]
+
+
+def mark_order_enqueued(order_id: str) -> None:
+    get_orders_table().update_item(
+        Key={"orderId": order_id},
+        UpdateExpression="SET enqueueStatus = :status, updatedAt = :updated_at",
+        ExpressionAttributeValues={
+            ":status": "ENQUEUED",
+            ":updated_at": datetime.now(UTC).isoformat(),
+        },
+        ConditionExpression="attribute_exists(orderId)",
+    )
 
 
 def get_order(order_id: str) -> dict[str, Any] | None:

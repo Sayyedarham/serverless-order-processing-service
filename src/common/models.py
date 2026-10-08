@@ -52,5 +52,6 @@ class OrderRecord(BaseModel):
     createdAt: str
     updatedAt: str
     expiresAt: int
+    enqueueStatus: str = "PENDING"
     errorMessage: str | None = None
     processedBy: str | None = None
