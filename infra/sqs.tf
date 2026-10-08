@@ -26,3 +26,20 @@ resource "aws_sqs_queue_redrive_allow_policy" "dlq_redrive_allow" {
     sourceQueueArns   = [aws_sqs_queue.orders_queue.arn]
   })
 }
+
+# Verification work is isolated from customer orders and limited to one run per invocation.
+resource "aws_sqs_queue" "verification_dlq" {
+  name                      = "${var.app_name}-verification-dlq-${var.environment}"
+  message_retention_seconds = 1209600
+}
+
+resource "aws_sqs_queue" "verification_queue" {
+  name                       = "${var.app_name}-verification-${var.environment}"
+  visibility_timeout_seconds = 240
+  message_retention_seconds  = 345600
+  receive_wait_time_seconds  = 10
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.verification_dlq.arn
+    maxReceiveCount     = 2
+  })
+}

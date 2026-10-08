@@ -47,6 +47,10 @@ class IdempotencyConflictError(Exception):
     pass
 
 
+class InvalidStateTransitionError(Exception):
+    pass
+
+
 def put_order_if_not_exists(record: OrderRecord) -> tuple[bool, dict[str, Any]]:
     table = get_orders_table()
     item_dict = record.model_dump()
@@ -112,13 +116,38 @@ def update_order_status(
         expr_attr_names["#p"] = "processedBy"
         expr_attr_values[":processed_by"] = processed_by
 
-    response = table.update_item(
-        Key={"orderId": order_id},
-        UpdateExpression=update_expr,
-        ExpressionAttributeNames=expr_attr_names,
-        ExpressionAttributeValues=float_to_decimal(expr_attr_values),
-        ReturnValues="ALL_NEW",
-    )
+    allowed_previous = {
+        OrderStatus.PROCESSING: [OrderStatus.RECEIVED.value, OrderStatus.PROCESSING.value],
+        OrderStatus.COMPLETED: [OrderStatus.PROCESSING.value],
+        OrderStatus.FAILED: [OrderStatus.PROCESSING.value],
+        OrderStatus.DLQ: [OrderStatus.PROCESSING.value],
+        # Explicit operator redrive resets a DLQ item for normal worker processing.
+        OrderStatus.RECEIVED: [OrderStatus.DLQ.value],
+    }.get(status, [])
+    if not allowed_previous:
+        raise InvalidStateTransitionError(f"status {status.value} cannot be set by the worker")
+    allowed_placeholders = []
+    for index, previous_status in enumerate(allowed_previous):
+        placeholder = f":previous_{index}"
+        expr_attr_values[placeholder] = previous_status
+        allowed_placeholders.append(placeholder)
+    try:
+        response = table.update_item(
+            Key={"orderId": order_id},
+            UpdateExpression=update_expr,
+            ExpressionAttributeNames=expr_attr_names,
+            ExpressionAttributeValues=float_to_decimal(expr_attr_values),
+            ConditionExpression=(
+                "attribute_exists(orderId) AND #s IN (" + ", ".join(allowed_placeholders) + ")"
+            ),
+            ReturnValues="ALL_NEW",
+        )
+    except ClientError as err:
+        if err.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+            raise InvalidStateTransitionError(
+                f"invalid transition to {status.value} for order {order_id}"
+            ) from err
+        raise
     attributes = response.get("Attributes", {})
     return decimal_to_float(attributes)  # type: ignore[no-any-return]
 

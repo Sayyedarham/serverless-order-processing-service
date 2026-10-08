@@ -16,7 +16,12 @@ def get_sqs_client() -> Any:
 
 
 def send_order_message(
-    order_id: str, idempotency_key: str, payload: dict[str, Any], correlation_id: str
+    order_id: str,
+    idempotency_key: str,
+    payload: dict[str, Any],
+    correlation_id: str,
+    verification_run_id: str | None = None,
+    scenario_id: str | None = None,
 ) -> str:
     client = get_sqs_client()
     body = {
@@ -25,6 +30,9 @@ def send_order_message(
         "payload": payload,
         "correlationId": correlation_id,
     }
+    if verification_run_id and scenario_id:
+        body["verificationRunId"] = verification_run_id
+        body["scenarioId"] = scenario_id
 
     message_attributes = {
         "OrderId": {

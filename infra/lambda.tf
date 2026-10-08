@@ -37,6 +37,16 @@ resource "aws_cloudwatch_log_group" "status_logs" {
   retention_in_days = 7
 }
 
+resource "aws_cloudwatch_log_group" "verification_logs" {
+  name              = "/aws/lambda/${var.app_name}-verification-${var.environment}"
+  retention_in_days = 7
+}
+
+resource "aws_cloudwatch_log_group" "verification_runner_logs" {
+  name              = "/aws/lambda/${var.app_name}-verification-runner-${var.environment}"
+  retention_in_days = 7
+}
+
 # --- Ingest Lambda Function ---
 
 resource "aws_lambda_function" "ingest" {
@@ -133,4 +143,56 @@ resource "aws_lambda_function" "status" {
     aws_cloudwatch_log_group.status_logs,
     aws_iam_role_policy.lambda_policy
   ]
+}
+
+resource "aws_lambda_function" "verification" {
+  function_name    = "${var.app_name}-verification-${var.environment}"
+  description      = "Authorizes and queues bounded verification runs"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "verification.handler.lambda_handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  timeout          = 10
+  memory_size      = 256
+  layers           = [aws_lambda_layer_version.powertools_layer.arn]
+  environment {
+    variables = {
+      ORDERS_TABLE_NAME       = aws_dynamodb_table.orders.name
+      VERIFICATION_QUEUE_URL  = aws_sqs_queue.verification_queue.id
+      API_SHARED_KEY          = var.api_shared_key
+      POWERTOOLS_SERVICE_NAME = "order-verification"
+    }
+  }
+  depends_on = [aws_cloudwatch_log_group.verification_logs, aws_iam_role_policy.lambda_policy]
+}
+
+resource "aws_lambda_function" "verification_runner" {
+  function_name    = "${var.app_name}-verification-runner-${var.environment}"
+  description      = "Runs fixed, bounded verification scenarios against this API"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "verification.runner.lambda_handler"
+  runtime          = "python3.12"
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  timeout          = 60
+  memory_size      = 256
+  layers           = [aws_lambda_layer_version.powertools_layer.arn]
+  environment {
+    variables = {
+      ORDERS_TABLE_NAME       = aws_dynamodb_table.orders.name
+      API_BASE_URL            = aws_apigatewayv2_stage.default_stage.invoke_url
+      API_SHARED_KEY          = var.api_shared_key
+      POWERTOOLS_SERVICE_NAME = "order-verification-runner"
+    }
+  }
+  depends_on = [aws_cloudwatch_log_group.verification_runner_logs, aws_iam_role_policy.lambda_policy]
+}
+
+resource "aws_lambda_event_source_mapping" "verification_sqs" {
+  event_source_arn                   = aws_sqs_queue.verification_queue.arn
+  function_name                      = aws_lambda_function.verification_runner.arn
+  batch_size                         = 1
+  maximum_batching_window_in_seconds = 0
+  function_response_types            = ["ReportBatchItemFailures"]
 }

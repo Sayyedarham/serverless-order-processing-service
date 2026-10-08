@@ -139,6 +139,8 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             idempotency_key=idempotency_key,
             payload=order_req.model_dump(),
             correlation_id=correlation_id,
+            verification_run_id=headers.get("x-verification-run-id"),
+            scenario_id=headers.get("x-verification-scenario-id"),
         )
         mark_order_enqueued(order_id)
 

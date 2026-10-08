@@ -60,7 +60,9 @@ data "aws_iam_policy_document" "lambda_policy_doc" {
     ]
     resources = [
       aws_sqs_queue.orders_queue.arn,
-      aws_sqs_queue.orders_dlq.arn
+      aws_sqs_queue.orders_dlq.arn,
+      aws_sqs_queue.verification_queue.arn,
+      aws_sqs_queue.verification_dlq.arn
     ]
   }
 

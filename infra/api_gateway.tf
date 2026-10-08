@@ -61,6 +61,13 @@ resource "aws_apigatewayv2_integration" "status_integration" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "verification_integration" {
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.verification.invoke_arn
+  payload_format_version = "2.0"
+}
+
 # --- Routes ---
 
 resource "aws_apigatewayv2_route" "post_orders" {
@@ -81,6 +88,24 @@ resource "aws_apigatewayv2_route" "get_health" {
   target    = "integrations/${aws_apigatewayv2_integration.status_integration.id}"
 }
 
+resource "aws_apigatewayv2_route" "post_verification_runs" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /verification/runs"
+  target    = "integrations/${aws_apigatewayv2_integration.verification_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_verification_run" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /verification/runs/{runId}"
+  target    = "integrations/${aws_apigatewayv2_integration.verification_integration.id}"
+}
+
+resource "aws_apigatewayv2_route" "get_verification_results" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "GET /verification/runs/{runId}/results"
+  target    = "integrations/${aws_apigatewayv2_integration.verification_integration.id}"
+}
+
 # --- Lambda Permissions for API Gateway ---
 
 resource "aws_lambda_permission" "api_gateway_ingest" {
@@ -95,6 +120,14 @@ resource "aws_lambda_permission" "api_gateway_status" {
   statement_id  = "AllowAPIGatewayInvokeStatus"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.status.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api_gateway_verification" {
+  statement_id  = "AllowAPIGatewayInvokeVerification"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.verification.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Order Reliability",
+  "version": "0.1.0",
+  "identifier": "com.example.order-reliability",
+  "build": {
+    "frontendDist": "../../docs",
+    "beforeDevCommand": "python -m http.server 1420 --directory ../docs",
+    "devUrl": "http://localhost:1420"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{ "title": "Order Reliability", "width": 1200, "height": 820, "minWidth": 900, "minHeight": 650 }],
+    "security": { "csp": "default-src 'self' https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https:; img-src 'self' data:" }
+  },
+  "bundle": { "active": true, "targets": "all" }
+}

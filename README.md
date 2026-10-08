@@ -1,11 +1,11 @@
-# Serverless Event-Driven Order Processing Service
+# Order Processing Reliability & Verification Platform
 
 [![CI - Lint, Type Check & Test](https://github.com/Sayyedarham/serverless-order-processing-service/actions/workflows/ci.yml/badge.svg)](https://github.com/Sayyedarham/serverless-order-processing-service/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/badge/Coverage-94.8%25-brightgreen.svg)](docs/results/benchmark_summary.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![AWS Serverless](https://img.shields.io/badge/AWS-Lambda%20%7C%20SQS%20%7C%20DynamoDB%20%7C%20API%20Gateway-orange.svg)](https://aws.amazon.com)
 
-A production-grade, highly available, event-driven order processing engine engineered for zero idle cost ($0/mo) under the AWS Always-Free Tier. Demonstrates multi-layer idempotency, partial batch failure isolation, dead-letter queue (DLQ) redrive automation, structured observability, and Infrastructure as Code (IaC) via Terraform.
+An event-driven order pipeline with a bounded, token-gated verification runner. It demonstrates idempotent ingestion, partial batch failure isolation, DLQ redrive, structured observability, and Terraform deployment. It is a demonstration system: SQS is at-least-once, costs are usage- and account-dependent, and no claim of exactly-once processing, high availability, or guaranteed $0 cost is made.
 
 ---
 
@@ -78,8 +78,8 @@ flowchart TD
    - Uses `ReportBatchItemFailures` so that single failing messages in a 10-message batch do not force reprocessing of successful messages.
 3. **Resilience & Chaos-Tested DLQ Redrive**:
    - Automatically routes messages to a Dead Letter Queue after 3 failed attempts. SQS Redrive tasks programmatically move messages back to the primary queue once downstream dependencies recover.
-4. **Zero Idle Running Cost & Safety Limits**:
-   - $0.00 idle cost using strictly on-demand AWS serverless primitives.
+4. **Cost Safety Limits**:
+   - On-demand serverless primitives, bounded API throttling, TTL, log retention, budget alert, and bounded verification runs.
    - Stage-level rate limiting (5 RPS, burst 10) and 10 KB payload size guards prevent runaway bills.
    - $1.00 monthly AWS Budget safety alert configured.
 5. **Observability**:
@@ -87,7 +87,11 @@ flowchart TD
 
 ---
 
-## Measured Benchmark Results
+## Reliability verification
+
+`POST /verification/runs` requires `X-Service-Key` and accepts only fixed scenario names. It queues one isolated verification job, persists a seven-day run record, and exposes `GET /verification/runs/{runId}` plus `/results`. The hosted site never includes an application token; the browser BYOK UI keeps one only in memory for the current tab. See [verification guide](docs/verification-guide.md), [failure model](docs/failure-model.md), and [cost safety](docs/cost-safety.md).
+
+## Historical benchmark artifacts
 
 > **Note**: All metrics below represent raw measured numbers from tests executed against the live AWS infrastructure in `us-east-1`. Raw artifacts are located in [`docs/results/`](docs/results/).
 
@@ -101,7 +105,7 @@ flowchart TD
 | **Ingest Latency (p99)** | **2,030 ms** | < 2,500 ms | PASSED |
 | **Unit & Integration Test Coverage** | **94.79%** (28 tests) | >= 85.0% | PASSED |
 | **DLQ Chaos Recovery** | **100% (5 / 5 messages redriven)** | 100% | PASSED |
-| **Idle Infrastructure Cost** | **$0.00 / month** | $0.00 | PASSED |
+| **Idle Infrastructure Cost** | Historical observation only | Not a guarantee | N/A |
 
 ---
 
@@ -112,6 +116,8 @@ flowchart TD
 - **System Architecture**: [`docs/architecture.md`](docs/architecture.md)
 - **Engineering Design Document**: [`docs/design-doc.md`](docs/design-doc.md)
 - **Operational Runbook**: [`docs/runbook.md`](docs/runbook.md)
+- **Cost safety**: [`docs/cost-safety.md`](docs/cost-safety.md)
+- **Verification guide**: [`docs/verification-guide.md`](docs/verification-guide.md)
 - **Architecture Decision Records**: [`docs/adr/`](docs/adr/)
 
 ---
@@ -194,8 +200,10 @@ pip install -t build/layer/python --platform manylinux2014_x86_64 --only-binary=
 # 4. Deploy Infrastructure
 cd infra
 terraform init
-terraform apply -auto-approve
+terraform apply -var='api_shared_key=<long-random-token>'
 ```
+
+Before the first deploy, run the one-time [state bootstrap](infra/bootstrap/README.md). It migrates the existing local state to the encrypted shared backend that GitHub Actions uses. Without it, a GitHub runner has no state and will try to recreate existing AWS resources.
 
 ---
 
@@ -205,7 +213,7 @@ To completely destroy all provisioned AWS cloud resources and prevent any future
 
 ```bash
 cd infra
-terraform destroy -auto-approve
+terraform destroy
 ```
 
 ---

@@ -1,7 +1,7 @@
 # System Architecture
 
 ## Overview
-The **Serverless Event-Driven Order Processing Service** is an enterprise-grade, zero-cost portfolio project demonstrating high throughput asynchronous processing, strict idempotency guarantees, fault tolerance, and comprehensive observability.
+The service is a bounded event-driven demonstration of asynchronous order processing. It uses at-least-once SQS delivery, conditional DynamoDB state changes, and a token-gated verification runner. It is not described as zero-cost, exactly-once, or highly available.
 
 ```mermaid
 flowchart TD
@@ -90,3 +90,8 @@ flowchart TD
 - **AWS Lambda Powertools**: Structured JSON logging with correlation IDs (`order_id`, `idempotency_key`, `request_id`).
 - **CloudWatch Alarms & SNS**: Immediate email notifications for DLQ message arrival, Lambda errors, API 5xx spikes, and elevated p99 latency.
 - **AWS Budgets**: $1.00 monthly spending safety ceiling with email alerts at 80% actual and 100% forecasted spend.
+
+### 6. Verification plane
+- **Verification API Lambda**: Requires `X-Service-Key`, validates a fixed scenario allowlist, persists a `QUEUED` run record, and sends exactly one verification queue message.
+- **Verification Queue and Runner Lambda**: Isolated from customer processing with batch size one and a bounded timeout. The runner calls only the deployed order API and creates internal TTL-bound failure tokens when applicable.
+- **Single DynamoDB table**: Run summaries, scenario evidence, and injection tokens share the order table under `VERIFICATION#…` and `FAILURE_INJECTION#…` keys. All expire after seven days (tokens sooner).

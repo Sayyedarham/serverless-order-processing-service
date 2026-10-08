@@ -18,6 +18,11 @@ output "orders_dlq_url" {
   value       = aws_sqs_queue.orders_dlq.id
 }
 
+output "verification_queue_url" {
+  description = "Bounded verification run queue URL"
+  value       = aws_sqs_queue.verification_queue.id
+}
+
 output "sns_topic_arn" {
   description = "SNS alert topic ARN"
   value       = aws_sns_topic.alerts.arn

@@ -68,6 +68,14 @@ The process sends to the source queue before deleting from the DLQ. If it stops 
 
 ## 3. Routine Operations & Maintenance
 
+### Verification run diagnosis
+1. Read `GET /verification/runs/<run-id>` with the application token.
+2. Read `/verification/runs/<run-id>/results`; inspect each scenario's status and evidence rather than treating `COMPLETED` as a universal pass.
+3. Search `/aws/lambda/serverless-orders-verification-runner-prod` using `verification_run_id` and `scenario_id`.
+4. A `FAILED` run has runner error evidence. A `SKIPPED` scenario is not a passing result and should be reviewed before extending the runner.
+
+Never create failure tokens manually or expose an endpoint for them. The verification runner is the only intended producer.
+
 ### Checking Free-Tier Usage and Spend
 ```bash
 aws budgets describe-budget \
@@ -79,5 +87,5 @@ aws budgets describe-budget \
 To remove all AWS resources and eliminate any lingering footprint:
 ```bash
 cd infra
-terraform destroy -auto-approve
+terraform destroy
 ```

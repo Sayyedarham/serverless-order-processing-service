@@ -491,6 +491,12 @@
   <main>
     <!-- LEFT: COMMAND -->
     <section class="col">
+      <div class="panel"><span class="pt">0 · BYOK connection</span>
+        <label class="fl">API URL <small>your deployed stack; kept only in this tab</small><input id="api-url" placeholder="https://…execute-api…amazonaws.com"></label>
+        <label class="fl">application token <small>not stored; desktop secure storage is safer</small><input id="service-token" type="password" autocomplete="off" placeholder="X-Service-Key"></label>
+        <div class="row" style="margin-top:.7rem"><button onclick="connect()">connect</button></div>
+        <div class="cap">The public showcase must not contain a token or AWS credentials.</div>
+      </div>
       <div class="panel"><span class="pt">1 · command</span>
         <div><span class="ps">$</span> curl -X POST <span class="src-apigw">$API</span>/orders \</div>
         <label class="fl">-H "Idempotency-Key:" <small># dedupe token</small>
@@ -510,11 +516,24 @@
         <div class="row" style="margin-top:.5rem"><input id="sid" placeholder="order id…"><button class="sm"
             onclick="check()" title="GET">↗</button></div>
       </div>
+      <div class="panel"><span class="pt">verification · bounded run</span>
+        <label class="fl">scenarios <small>fixed allowlist; Ctrl/Cmd-click to select</small>
+          <select id="scenarios" multiple size="5">
+            <option value="happy-path" selected>happy-path</option><option value="duplicate-request" selected>duplicate-request</option>
+            <option value="concurrent-duplicate">concurrent-duplicate</option><option value="worker-failure">worker-failure</option>
+            <option value="partial-batch-failure">partial-batch-failure</option><option value="dlq">dlq</option>
+            <option value="redrive">redrive</option><option value="downstream-failure">downstream-failure</option>
+            <option value="state-transition">state-transition</option><option value="small-load">small-load</option>
+          </select>
+        </label>
+        <div class="row" style="margin-top:.7rem"><button class="go" onclick="startVerification()">▶ start bounded run</button></div>
+        <pre id="verification-result" class="cap">Connect a user-owned stack to run verification.</pre>
+      </div>
       <div class="panel"><span class="pt">legend</span>
         <div><span class="k-obs">obs</span> <span class="cm">= seen by your browser (HTTP response)</span></div>
         <div><span class="k-inf">inf</span> <span class="cm">= inferred from order status; AWS internals are not visible
             from a browser</span></div>
-        <div class="cap">Metrics: 94.8% coverage · P50 ingest 419 ms · idle cost $0</div>
+        <div class="cap">Measured results are shown only after a run. Costs are usage-dependent; see cost-safety.md.</div>
       </div>
     </section>
 
@@ -586,13 +605,13 @@
   </main>
 
   <footer>
-    <span>API <span class="src-apigw">https://l67j9sjm76.execute-api.us-east-1.amazonaws.com</span></span>
+    <span>API <span class="src-apigw" id="api-display">not connected</span></span>
     <span class="sp"></span>
-    <span>poll: 3 s × 8</span><span>retries: 3 → DLQ</span><span>visibility: 30 s</span>
+    <span>poll: 3 s × 8</span><span>retries: 3 → DLQ</span><span>visibility: 60 s</span>
   </footer>
 
   <script>
-    const API = "https://l67j9sjm76.execute-api.us-east-1.amazonaws.com";
+    let API = "", TOKEN = "";
     const $ = i => document.getElementById(i);
     const IDS = ['client', 'apigw', 'ingest', 'sqs', 'worker', 'ext', 'ddb', 'dlq'];
     const DEF = { ddb: 'ingest writes RECEIVED; worker writes PROCESSING → COMPLETED/FAILED', dlq: 'receives message after 3 failed deliveries' };
@@ -612,6 +631,27 @@
     function clock(on) { clearInterval(tick); if (on) { t0 = performance.now(); tick = setInterval(() => $('clock').textContent = Math.round(performance.now() - t0) + ' ms', 100) } }
 
     function newKey() { $('key').value = 'idem-' + crypto.randomUUID() }
+    async function connect() {
+      API = $('api-url').value.trim().replace(/\/$/, ''); TOKEN = $('service-token').value;
+      $('api-display').textContent = API || 'not connected';
+      if (API && window.__TAURI__) {
+        try { await window.__TAURI__.core.invoke('save_connection', { apiUrl: API, token: TOKEN }) }
+        catch (error) { lg('sys', `desktop secret-storage error: ${error}`, 'obs', 'wn') }
+      }
+      lg('sys', API ? 'connected for this browser session; token is not persisted' : 'enter an API URL first', 'obs', API ? 'ok' : 'wn');
+    }
+    async function loadDesktopConnection() {
+      if (!window.__TAURI__) return;
+      try {
+        const saved = await window.__TAURI__.core.invoke('load_connection');
+        if (!saved) return;
+        $('api-url').value = saved.apiUrl || ''; $('service-token').value = saved.token || '';
+        API = saved.apiUrl || ''; TOKEN = saved.token || ''; $('api-display').textContent = API || 'not connected';
+        lg('sys', 'loaded desktop connection from OS secure storage', 'obs', 'ok');
+      } catch (error) { lg('sys', `desktop secure storage unavailable: ${error}`, 'obs', 'wn') }
+    }
+    function headers(extra = {}) { return { 'Content-Type': 'application/json', ...(TOKEN ? { 'X-Service-Key': TOKEN } : {}), ...extra } }
+    function requireConnection() { if (API) return true; lg('sys', 'connect a BYOK API URL first', 'obs', 'er'); return false }
     function preset() {
       $('body').value = JSON.stringify({
         customer_id: 'cust-portfolio-user', items: [
@@ -621,6 +661,7 @@
     }
 
     async function submit(replay) {
+      if (!requireConnection()) return;
       const my = ++run, key = $('key').value, body = $('body').value;
       reset(); clock(true);
       if (replay) lg('sys', 'replay: re-sending with the SAME Idempotency-Key — expect no duplicate order', 'inf', 'wn');
@@ -630,7 +671,7 @@
       http(reqTxt);
       let res, data;
       try {
-        res = await fetch(API + '/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key }, body });
+        res = await fetch(API + '/orders', { method: 'POST', headers: headers({ 'Idempotency-Key': key }), body });
         data = await res.json().catch(() => ({}));
       } catch (e) {
         ns('client', 'error', 'network error'); lg('client', e.message, 'obs', 'er'); clock(false); return
@@ -661,7 +702,7 @@
       await new Promise(r => setTimeout(r, 3000));
       if (my !== run) return;
       let res, data;
-      try { res = await fetch(`${API}/orders/${id}`); data = await res.json() }
+      try { res = await fetch(`${API}/orders/${id}`, { headers: headers() }); data = await res.json() }
       catch (e) { lg('client', 'poll error: ' + e.message, 'obs', 'er'); clock(false); return }
       const st = data.order?.status || 'UNKNOWN';
       lg('apigw', `GET /orders/${id.slice(0, 8)}… → ${res.status}  status=${st}  (poll ${n + 1}/8)`, 'obs', st === 'FAILED' ? 'er' : st === 'COMPLETED' ? 'ok' : '');
@@ -690,11 +731,12 @@
     }
 
     async function check() {
+      if (!requireConnection()) return;
       const id = $('sid').value.trim(); if (!id) return;
       run++; clock(false);
       lg('client', `GET /orders/${id}`, 'obs');
       try {
-        const res = await fetch(`${API}/orders/${id}`), d = await res.json();
+        const res = await fetch(`${API}/orders/${id}`, { headers: headers() }), d = await res.json();
         http(`GET /orders/${id} HTTP/1.1\n\n─────────────\nHTTP/1.1 ${res.status}\n\n${JSON.stringify(d, null, 2)}`);
         const st = d.order?.status; $('oid').textContent = id;
         lg('apigw', `← ${res.status}  status=${st || 'n/a'}`, 'obs', res.ok ? 'ok' : 'er');
@@ -702,7 +744,33 @@
       } catch (e) { lg('client', e.message, 'obs', 'er') }
     }
 
-    newKey(); preset(); reset();
+    async function startVerification() {
+      if (!requireConnection()) return;
+      const scenarios = [...$('scenarios').selectedOptions].map(o => o.value);
+      if (!scenarios.length) { $('verification-result').textContent = 'Select at least one fixed scenario.'; return }
+      $('verification-result').textContent = 'Queuing bounded verification run…';
+      try {
+        const response = await fetch(`${API}/verification/runs`, { method: 'POST', headers: headers(), body: JSON.stringify({ scenarios }) });
+        const run = await response.json();
+        if (!response.ok) { $('verification-result').textContent = JSON.stringify(run, null, 2); return }
+        $('verification-result').textContent = `Run ${run.runId}: QUEUED`;
+        pollVerification(run.runId, 0);
+      } catch (error) { $('verification-result').textContent = `Request failed: ${error.message}` }
+    }
+    async function pollVerification(runId, attempt) {
+      if (attempt >= 24) { $('verification-result').textContent += '\nPolling limit reached. Check status later.'; return }
+      await new Promise(resolve => setTimeout(resolve, 2500));
+      try {
+        const response = await fetch(`${API}/verification/runs/${runId}`, { headers: headers() });
+        const run = await response.json();
+        if (!response.ok) { $('verification-result').textContent = JSON.stringify(run, null, 2); return }
+        if (run.status === 'QUEUED' || run.status === 'RUNNING') { $('verification-result').textContent = `Run ${runId}: ${run.status}`; return pollVerification(runId, attempt + 1) }
+        const results = await fetch(`${API}/verification/runs/${runId}/results`, { headers: headers() }).then(r => r.json());
+        $('verification-result').textContent = JSON.stringify(results, null, 2);
+      } catch (error) { $('verification-result').textContent = `Poll failed: ${error.message}` }
+    }
+
+    newKey(); preset(); reset(); loadDesktopConnection();
     lg('sys', 'ready — choose a preset and press ▶ run', 'obs');
   </script>
 </body>
