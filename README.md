@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![AWS Serverless](https://img.shields.io/badge/AWS-Lambda%20%7C%20SQS%20%7C%20DynamoDB%20%7C%20API%20Gateway-orange.svg)](https://aws.amazon.com)
 
-An event-driven order pipeline with a bounded, token-gated verification runner. It demonstrates idempotent ingestion, partial batch failure isolation, DLQ redrive, structured observability, and Terraform deployment. It is a demonstration system: SQS is at-least-once, costs are usage- and account-dependent, and no claim of exactly-once processing, high availability, or guaranteed $0 cost is made.
+An event-driven order pipeline with a bounded, token-gated verification runner. Features idempotent ingestion, partial batch failure isolation, DLQ redrive, structured observability, and Terraform deployment. It is a demonstration system: SQS is at-least-once, costs are usage- and account-dependent, and no claim of exactly-once processing, high availability, or guaranteed $0 cost is made.
 
 ---
 
