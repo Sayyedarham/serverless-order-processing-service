@@ -57,6 +57,8 @@ jobs:
     defaults:
       run:
         working-directory: infra
+    env:
+      TF_VAR_api_shared_key: ${{ secrets.TF_VAR_API_SHARED_KEY }}
 
     steps:
       - name: Checkout Code

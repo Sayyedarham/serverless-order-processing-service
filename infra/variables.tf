@@ -26,6 +26,7 @@ variable "api_shared_key" {
   description = "Optional shared secret key for write endpoints (leave empty for public portfolio demo)"
   type        = string
   default     = ""
+  sensitive   = true
 }
 
 variable "github_repo" {

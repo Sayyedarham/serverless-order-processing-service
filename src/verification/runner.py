@@ -15,7 +15,10 @@ from common.models import OrderRecord, OrderStatus
 from verification.report import render_reliability_report
 from verification.storage import get_run, put_scenario_result, set_run_status
 
-POLL_SECONDS = 20
+# The order queue batches for up to five seconds and Lambda cold starts can
+# add latency. Keep this bounded while leaving room for two live scenarios in
+# the runner's 60-second hard timeout.
+POLL_SECONDS = 25
 SMALL_LOAD_REQUESTS = 10  # deliberately below the documented hard maximum of 100
 
 
@@ -65,8 +68,9 @@ def _wait_for_terminal(order_id: str) -> tuple[bool, dict[str, Any]]:
     last: dict[str, Any] = {}
     while time.monotonic() < deadline:
         code, last = _request("GET", f"/orders/{order_id}")
-        if code == 200 and last.get("status") in {"COMPLETED", "FAILED", "DLQ"}:
-            return last["status"] == "COMPLETED", last
+        order = last.get("order", last)
+        if code == 200 and order.get("status") in {"COMPLETED", "FAILED", "DLQ"}:
+            return order["status"] == "COMPLETED", last
         time.sleep(1)
     return False, last
 

@@ -99,6 +99,7 @@ resource "aws_lambda_function" "worker" {
       POWERTOOLS_SERVICE_NAME      = "order-worker"
       POWERTOOLS_METRICS_NAMESPACE = "OrderProcessingService"
       MAX_RECEIVE_COUNT           = "3"
+      DOWNSTREAM_FAILURE_RATE      = "0.0"
     }
   }
 

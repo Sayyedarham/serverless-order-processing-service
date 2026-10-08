@@ -82,6 +82,12 @@ def test_runner_fixed_scenarios_are_bounded(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 @pytest.mark.unit
+def test_runner_reads_nested_order_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(runner, "_request", lambda *_: (200, {"order": {"status": "COMPLETED"}}))
+    assert runner._wait_for_terminal("order-1") == (True, {"order": {"status": "COMPLETED"}})
+
+
+@pytest.mark.unit
 def test_runner_marks_failed_run_on_error(
     setup_dynamodb: Any, lambda_context: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
