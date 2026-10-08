@@ -6,6 +6,7 @@ from aws_lambda_powertools.metrics import MetricUnit
 
 from common.config import MAX_RECEIVE_COUNT, logger, metrics, tracer
 from common.dynamo import get_order, update_order_status
+from common.failure_injection import consume_failure_injection
 from common.models import OrderStatus
 from worker.downstream import (
     DownstreamPermanentError,
@@ -32,6 +33,9 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             order_id = body.get("orderId")
             idempotency_key = body.get("idempotencyKey")
             payload = body.get("payload", {})
+            verification_run_id = body.get("verificationRunId")
+            scenario_id = body.get("scenarioId")
+            correlation_id = body.get("correlationId")
 
             if not order_id:
                 logger.error(
@@ -41,7 +45,12 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
                 continue
 
             logger.append_keys(
-                order_id=order_id, idempotency_key=idempotency_key, message_id=message_id
+                order_id=order_id,
+                idempotency_key=idempotency_key,
+                message_id=message_id,
+                verification_run_id=verification_run_id,
+                scenario_id=scenario_id,
+                correlation_id=correlation_id,
             )
 
             current_order = get_order(order_id)
@@ -68,9 +77,13 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             )
 
             fulfillment_key = f"{order_id}:FULFILLMENT"
+            if consume_failure_injection(verification_run_id, scenario_id, "WORKER") is not None:
+                raise DownstreamTransientError("verification-injected worker failure")
             call_downstream_fulfillment(
                 order_id=order_id,
                 fulfillment_key=fulfillment_key,
+                verification_run_id=verification_run_id,
+                scenario_id=scenario_id,
             )
 
             update_order_status(order_id=order_id, status=OrderStatus.COMPLETED)

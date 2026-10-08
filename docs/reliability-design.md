@@ -127,3 +127,17 @@ Use these terms precisely:
 - **Idempotent fulfillment:** repeated operation calls with the same stable key return one durable logical result.
 - **No silent loss:** accepted work remains recoverable or reaches a documented terminal state, subject to the stated AWS service and retention assumptions.
 - Do not claim **exactly once**, **zero cost**, or **high availability**. The target design controls duplicate effects through idempotency and documents cost assumptions; it cannot guarantee those broader properties.
+
+## Phases 9–11: Controlled failure, tracing, and reports
+
+### Internal failure injection
+
+Failure injection is implemented as TTL-bound DynamoDB token items, never as a public HTTP API. A verification runner must create a token with a run ID, scenario ID, action, count (1–3), and expiry (1–900 seconds). The worker consumes each token atomically. Supported actions are `WORKER`, `FULFILLMENT_FAIL`, and `FULFILLMENT_DELAY`; delay is capped at three seconds. Normal public order messages have no verification IDs, so they cannot consume a token.
+
+### Trace fields
+
+The ingest handler creates a `correlation_id`, persists it with the order, and puts it on the SQS message. Worker logs append `verification_run_id`, `scenario_id`, `order_id`, `idempotency_key`, `correlation_id`, and `message_id` when present. The fulfillment log retains the order and fulfillment key. These are structured Powertools JSON log keys; request payloads and secrets are not logged.
+
+### Results
+
+`verification.report.render_reliability_report` turns structured scenario output into a short human-readable report. It prints only supplied numeric measurements; absent percentiles and reliability counters are omitted rather than guessed.

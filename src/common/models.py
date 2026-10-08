@@ -55,3 +55,4 @@ class OrderRecord(BaseModel):
     enqueueStatus: str = "PENDING"
     errorMessage: str | None = None
     processedBy: str | None = None
+    correlationId: str | None = None

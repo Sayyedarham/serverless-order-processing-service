@@ -131,6 +131,7 @@ def test_ingest_valid_order_success_and_sqs_published(
     queued_body = json.loads(messages[0]["Body"])
     assert queued_body["orderId"] == body["orderId"]
     assert queued_body["idempotencyKey"] == "client-request-uuid-001"
+    assert queued_body["correlationId"]
 
 
 @pytest.mark.unit

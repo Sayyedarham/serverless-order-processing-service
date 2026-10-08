@@ -15,12 +15,15 @@ def get_sqs_client() -> Any:
     return _sqs_client
 
 
-def send_order_message(order_id: str, idempotency_key: str, payload: dict[str, Any]) -> str:
+def send_order_message(
+    order_id: str, idempotency_key: str, payload: dict[str, Any], correlation_id: str
+) -> str:
     client = get_sqs_client()
     body = {
         "orderId": order_id,
         "idempotencyKey": idempotency_key,
         "payload": payload,
+        "correlationId": correlation_id,
     }
 
     message_attributes = {
@@ -32,6 +35,7 @@ def send_order_message(order_id: str, idempotency_key: str, payload: dict[str, A
             "DataType": "String",
             "StringValue": idempotency_key,
         },
+        "CorrelationId": {"DataType": "String", "StringValue": correlation_id},
     }
 
     response = client.send_message(
@@ -41,5 +45,8 @@ def send_order_message(order_id: str, idempotency_key: str, payload: dict[str, A
     )
 
     msg_id = response.get("MessageId", "")
-    logger.info("Published order to SQS", extra={"order_id": order_id, "sqs_message_id": msg_id})
+    logger.info(
+        "Published order to SQS",
+        extra={"order_id": order_id, "correlation_id": correlation_id, "sqs_message_id": msg_id},
+    )
     return str(msg_id)

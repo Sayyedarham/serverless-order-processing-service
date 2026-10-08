@@ -97,7 +97,10 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         )
 
     order_id = str(uuid.uuid5(uuid.NAMESPACE_OID, idempotency_key))
-    logger.append_keys(order_id=order_id, idempotency_key=idempotency_key)
+    correlation_id = event.get("requestContext", {}).get("requestId") or str(uuid.uuid4())
+    logger.append_keys(
+        order_id=order_id, idempotency_key=idempotency_key, correlation_id=correlation_id
+    )
 
     total_amount = (
         order_req.total_amount
@@ -118,6 +121,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         createdAt=now_iso,
         updatedAt=now_iso,
         expiresAt=expires_at,
+        correlationId=correlation_id,
     )
 
     try:
@@ -134,6 +138,7 @@ def lambda_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             order_id=order_id,
             idempotency_key=idempotency_key,
             payload=order_req.model_dump(),
+            correlation_id=correlation_id,
         )
         mark_order_enqueued(order_id)
 
